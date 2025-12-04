@@ -29,9 +29,7 @@ export default function CRM() {
       try {
         setLoading(true);
         const response = await fetch('/api/customers');
-        if (!response.ok) {
-          throw new Error('Failed to fetch customers');
-        }
+        if (!response.ok) throw new Error('Failed to fetch customers');
         const data = await response.json();
         setCustomers(data);
         setFilteredCustomers(data);
@@ -41,111 +39,80 @@ export default function CRM() {
         setLoading(false);
       }
     };
-
     fetchCustomers();
   }, []);
 
-  // Filter customers based on search term and date range
   useEffect(() => {
     let result = [...customers];
-    
-    // Apply search filter
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(customer => 
-        customer.name.toLowerCase().includes(term) || 
-        customer.phoneNumber.includes(term)
+      result = result.filter(
+        (customer) =>
+          customer.name.toLowerCase().includes(term) ||
+          customer.phoneNumber.includes(term)
       );
     }
-    
-    // Apply date filter
+
     if (dateFilter.startDate || dateFilter.endDate) {
-      result = result.filter(customer => {
+      result = result.filter((customer) => {
         const customerDate = new Date(customer.createdAt);
-        
+
         if (dateFilter.startDate && dateFilter.endDate) {
           const startDate = new Date(dateFilter.startDate);
           const endDate = new Date(dateFilter.endDate);
-          endDate.setHours(23, 59, 59, 999); // Include the entire end date
+          endDate.setHours(23, 59, 59, 999);
           return customerDate >= startDate && customerDate <= endDate;
         } else if (dateFilter.startDate) {
-          const startDate = new Date(dateFilter.startDate);
-          return customerDate >= startDate;
+          return customerDate >= new Date(dateFilter.startDate);
         } else if (dateFilter.endDate) {
           const endDate = new Date(dateFilter.endDate);
-          endDate.setHours(23, 59, 59, 999); // Include the entire end date
+          endDate.setHours(23, 59, 59, 999);
           return customerDate <= endDate;
         }
-        
         return true;
       });
     }
-    
+
     setFilteredCustomers(result);
   }, [searchTerm, dateFilter, customers]);
 
-  // Format date to a more readable format
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
   const handleDeleteCustomer = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to delete this customer?')) return;
 
     try {
       setDeletingId(id);
       const response = await fetch(`/api/customers`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete customer');
-      }
+      if (!response.ok) throw new Error('Failed to delete customer');
 
-      // Remove the customer from the local state
-      const updatedCustomers = customers.filter(customer => customer._id !== id);
-      setCustomers(updatedCustomers);
-      
-      // Re-apply filters to the updated customer list
-      let result = [...updatedCustomers];
-      
+      const updated = customers.filter((c) => c._id !== id);
+      setCustomers(updated);
+
+      let result = [...updated];
+
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        result = result.filter(customer => 
-          customer.name.toLowerCase().includes(term) || 
-          customer.phoneNumber.includes(term)
+        result = result.filter(
+          (c) =>
+            c.name.toLowerCase().includes(term) ||
+            c.phoneNumber.includes(term)
         );
       }
-      
-      if (dateFilter.startDate || dateFilter.endDate) {
-        result = result.filter(customer => {
-          const customerDate = new Date(customer.createdAt);
-          
-          if (dateFilter.startDate && dateFilter.endDate) {
-            const startDate = new Date(dateFilter.startDate);
-            const endDate = new Date(dateFilter.endDate);
-            endDate.setHours(23, 59, 59, 999);
-            return customerDate >= startDate && customerDate <= endDate;
-          } else if (dateFilter.startDate) {
-            const startDate = new Date(dateFilter.startDate);
-            return customerDate >= startDate;
-          } else if (dateFilter.endDate) {
-            const endDate = new Date(dateFilter.endDate);
-            endDate.setHours(23, 59, 59, 999);
-            return customerDate <= endDate;
-          }
-          
-          return true;
-        });
-      }
-      
+
       setFilteredCustomers(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete customer');
@@ -156,54 +123,23 @@ export default function CRM() {
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
-    
-    // Add title
     doc.setFontSize(18);
     doc.text('Customer List', 14, 20);
-    
-    // Add date
     doc.setFontSize(12);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-    
-    // Add filter information if applicable
-    let filterText = '';
-    if (searchTerm) {
-      filterText += `Search: ${searchTerm}`;
-    }
-    if (dateFilter.startDate || dateFilter.endDate) {
-      if (filterText) filterText += ' | ';
-      if (dateFilter.startDate && dateFilter.endDate) {
-        filterText += `Date Range: ${dateFilter.startDate} to ${dateFilter.endDate}`;
-      } else if (dateFilter.startDate) {
-        filterText += `Date From: ${dateFilter.startDate}`;
-      } else if (dateFilter.endDate) {
-        filterText += `Date To: ${dateFilter.endDate}`;
-      }
-    }
-    
-    if (filterText) {
-      doc.setFontSize(10);
-      doc.text(`Filters: ${filterText}`, 14, 35);
-    }
-    
-    // Add table
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+
     autoTable(doc, {
-      startY: filterText ? 45 : 40,
+      startY: 35,
       head: [['Name', 'Phone Number', 'Added Date']],
-      body: filteredCustomers.map(customer => [
-        customer.name,
-        customer.phoneNumber,
-        formatDate(customer.createdAt)
+      body: filteredCustomers.map((c) => [
+        c.name,
+        c.phoneNumber,
+        formatDate(c.createdAt)
       ]),
-      styles: {
-        fontSize: 10
-      },
-      headStyles: {
-        fillColor: [99, 102, 241] // Indigo color to match the theme
-      }
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [99, 102, 241] }
     });
-    
-    // Save the PDF
+
     doc.save('customer-list.pdf');
   };
 
@@ -213,204 +149,154 @@ export default function CRM() {
   };
 
   return (
-    <div className="container mx-auto py-4 px-2 sm:px-4">
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Customer Management</h1>
-        <p className="text-gray-600 mt-1 text-sm sm:text-base">View and manage your customers</p>
+    <div className="container mx-auto py-3 px-2">
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-gray-900">Customer Management</h1>
+        <p className="text-gray-600 text-xs mt-1">Manage your customers efficiently</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
-        <div className="flex justify-between items-center gap-3 mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Customer List</h2>
-          <button 
+      <div className="bg-white rounded-xl shadow-sm border p-3">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-sm font-semibold text-gray-900">Customer List</h2>
+
+          <button
             onClick={handleExportPDF}
             disabled={loading || filteredCustomers.length === 0}
-            className="w-auto bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-1 disabled:opacity-50"
+            className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 disabled:opacity-50 flex items-center gap-1"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
             Export PDF
           </button>
         </div>
-        
-        {/* Filter Section */}
-        <div className="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex flex-col gap-3">
-            {/* Search Filter */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search by name or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-9 rounded-lg border-2 border-gray-300 p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              )}
-            </div>
-            
-            {/* Date Filter and Reset Button */}
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="text-xs text-gray-600 flex items-center">Date Range:</div>
-                <div className="flex gap-2">
-                  <div>
-                    <input
-                      type="date"
-                      value={dateFilter.startDate}
-                      onChange={(e) => setDateFilter({...dateFilter, startDate: e.target.value})}
-                      className="rounded-lg border-2 border-gray-300 p-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all w-full"
-                    />
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-gray-500 text-xs">to</span>
-                  </div>
-                  <div>
-                    <input
-                      type="date"
-                      value={dateFilter.endDate}
-                      onChange={(e) => setDateFilter({...dateFilter, endDate: e.target.value})}
-                      className="rounded-lg border-2 border-gray-300 p-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Reset Filters Button */}
-              {(searchTerm || dateFilter.startDate || dateFilter.endDate) && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleResetFilters}
-                    className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                    Reset Filters
-                  </button>
-                </div>
-              )}
-            </div>
+
+        {/* Filters */}
+        <div className="mb-4 p-2 bg-gray-50 rounded-lg border border-gray-200">
+          {/* Search */}
+          <div className="relative mb-2">
+            <input
+              type="text"
+              placeholder="Search name or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8 pr-7 rounded-lg border-2 border-gray-300 p-1.5 text-xs"
+            />
+
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                ✕
+              </button>
+            )}
           </div>
+
+          {/* Date Filters */}
+          <div className="flex gap-2 items-center text-xs">
+            <span>Date:</span>
+            <input
+              type="date"
+              value={dateFilter.startDate}
+              onChange={(e) =>
+                setDateFilter({ ...dateFilter, startDate: e.target.value })
+              }
+              className="border rounded p-1 text-xs"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={dateFilter.endDate}
+              onChange={(e) =>
+                setDateFilter({ ...dateFilter, endDate: e.target.value })
+              }
+              className="border rounded p-1 text-xs"
+            />
+          </div>
+
+          {(searchTerm || dateFilter.startDate || dateFilter.endDate) && (
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={handleResetFilters}
+                className="text-xs text-indigo-600"
+              >
+                Reset
+              </button>
+            </div>
+          )}
         </div>
-        
+
+        {/* Loading */}
         {loading ? (
-          <div className="flex justify-center items-center py-6">
-            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-indigo-600"></div>
-            <span className="ml-2 text-sm sm:text-base">Loading customers...</span>
-          </div>
+          <div className="text-center py-6 text-sm">Loading...</div>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-            <p className="text-red-600 text-sm sm:text-base">Error: {error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
-            >
-              Retry
-            </button>
-          </div>
+          <div className="text-center text-red-600 text-sm py-4">{error}</div>
         ) : filteredCustomers.length === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-gray-500 text-sm sm:text-base">
-              {searchTerm ? 'No customers found matching your search.' : 'No customers found. Customer data will appear here after transactions.'}
-            </p>
+          <div className="text-center text-gray-500 text-sm py-4">
+            No customers found
           </div>
         ) : (
           <>
-            {/* Mobile view - table-like columns */}
+            {/* Mobile view */}
             <div className="sm:hidden space-y-2">
               {filteredCustomers.map((customer) => (
-                <div key={customer._id} className="border border-gray-200 rounded-lg p-3 bg-white">
-                  <div className="grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-1 flex items-center justify-center">
-                      <div className="flex-shrink-0 h-8 w-8">
-                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 flex items-center justify-center">
-                          <span className="text-gray-600 font-bold text-xs">{customer.name.charAt(0)}</span>
-                        </div>
+                <div
+                  key={customer._id}
+                  className="border rounded-lg p-2 bg-white"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-sm font-medium">{customer.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {customer.phoneNumber}
+                      </div>
+                      <div className="text-[10px] text-gray-400">
+                        {formatDate(customer.createdAt)}
                       </div>
                     </div>
-                    <div className="col-span-7">
-                      <div className="text-sm font-medium text-gray-900 truncate">{customer.name}</div>
-                      <div className="text-xs text-gray-500 truncate">{customer.phoneNumber}</div>
-                    </div>
-                    <div className="col-span-3 text-xs text-gray-500">
-                      {formatDate(customer.createdAt)}
-                    </div>
-                    <div className="col-span-1 flex justify-end">
-                      <button
-                        onClick={() => handleDeleteCustomer(customer._id)}
-                        disabled={deletingId === customer._id}
-                        className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                      >
-                        {deletingId === customer._id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleDeleteCustomer(customer._id)}
+                      className="text-red-600 text-xs"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-            
-            {/* Desktop view - table */}
+
+            {/* Desktop table */}
             <div className="hidden sm:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added</th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-2 py-2 text-left font-medium text-gray-600">
+                      Name
+                    </th>
+                    <th className="px-2 py-2 text-left font-medium text-gray-600">
+                      Phone
+                    </th>
+                    <th className="px-2 py-2 text-left font-medium text-gray-600">
+                      Added
+                    </th>
+                    <th className="px-2 py-2 text-left font-medium text-gray-600">
+                      Action
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+
+                <tbody className="divide-y divide-gray-200">
                   {filteredCustomers.map((customer) => (
                     <tr key={customer._id}>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-8 w-8">
-                            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 flex items-center justify-center">
-                              <span className="text-gray-600 font-bold text-sm">{customer.name.charAt(0)}</span>
-                            </div>
-                          </div>
-                          <div className="ml-2">
-                            <div className="text-sm font-medium text-gray-900">{customer.name}</div>
-                          </div>
-                        </div>
+                      <td className="px-2 py-2">{customer.name}</td>
+                      <td className="px-2 py-2">{customer.phoneNumber}</td>
+                      <td className="px-2 py-2">
+                        {formatDate(customer.createdAt)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">{customer.phoneNumber}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">{formatDate(customer.createdAt)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      <td className="px-2 py-2">
                         <button
                           onClick={() => handleDeleteCustomer(customer._id)}
-                          disabled={deletingId === customer._id}
-                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                          className="text-red-600"
                         >
-                          {deletingId === customer._id ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                          )}
+                          Delete
                         </button>
                       </td>
                     </tr>
