@@ -46,7 +46,16 @@ export async function GET(request: Request) {
         }
       }
 
-      const billCount = await Sale.countDocuments(saleQuery);
+      const result = await Sale.aggregate([
+        { $match: saleQuery },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $add: [1, { $ifNull: ["$editCount", 0] }] } }
+          }
+        }
+      ]);
+      const billCount = result.length > 0 ? result[0].total : 0;
       return {
         ...user.toObject(),
         billCount

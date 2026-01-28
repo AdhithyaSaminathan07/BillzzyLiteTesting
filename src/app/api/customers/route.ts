@@ -9,14 +9,14 @@ import { authOptions } from "@/lib/auth";
 /**
  * GET: Fetches customers for the currently logged-in user.
  */
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
-    
+
     const tenantId = session.user.email;
     await dbConnect();
 
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     await dbConnect();
 
     const { name, phoneNumber, email } = await request.json();
-    
+
     if (!name || !phoneNumber) {
       return NextResponse.json({ message: "Name and phone number are required" }, { status: 400 });
     }
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -85,7 +85,7 @@ export async function DELETE(request: Request) {
     await dbConnect();
 
     const { id } = await request.json();
-    
+
     if (!id) {
       return NextResponse.json({ message: "Customer ID is required" }, { status: 400 });
     }

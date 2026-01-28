@@ -38,7 +38,7 @@ const transformProduct = (product: IProductFromDB) => {
 
 
 // GET all products for a specific tenant
-export async function GET(_request: NextRequest) {
+export async function GET() {
   // 3. GET THE SESSION using getServerSession with your authOptions
   const session = await getServerSession(authOptions);
   const tenantId = session?.user?.email;
@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
         tenantId: tenantId, // Assign tenantId from the user's session
       }));
       if (productsWithTenant.length > 0) {
-        await Product.insertMany(productsWithTenant, { ordered: false }).catch(err => {
-          if (err.code !== 11000) throw err;
+        await Product.insertMany(productsWithTenant, { ordered: false }).catch((err: unknown) => {
+          if ((err as { code?: number }).code !== 11000) throw err;
           console.warn("Batch insert contained duplicate SKUs for this tenant, which were ignored.");
         });
       }

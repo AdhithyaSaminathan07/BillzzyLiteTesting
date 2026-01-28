@@ -7,8 +7,7 @@ import Sale from "@/models/Sales";
 import { authOptions } from "@/lib/auth";
 
 /**
- * GET: Securely fetches sales data ONLY for the currently logged-in user.
- * This is a named export, which is correct.
+ * GET: Securely fetches sales summary data for the dashboard
  */
 export async function GET(request: Request) {
   try {
@@ -26,28 +25,21 @@ export async function GET(request: Request) {
     const startParam = searchParams.get('startDate');
     const endParam = searchParams.get('endDate');
 
-    // Default to today if nothing provided
     let startDate: Date;
     let endDate: Date = new Date();
-    const now = new Date(); // Start with current time
-    // Force now to use Indian Standard Time (IST) if deployed on UTC server
-    // But since we are doing date objects, let's keep it simple for now and rely on consistent server time.
+    const now = new Date();
 
     if (startParam && endParam) {
-      // 1. Custom Date Range
       startDate = new Date(startParam);
       startDate.setHours(0, 0, 0, 0);
-
       endDate = new Date(endParam);
       endDate.setHours(23, 59, 59, 999);
     } else {
-      // 2. Predefined Periods
       switch (period) {
         case 'weekly':
           const firstDayOfWeek = now.getDate() - now.getDay();
           startDate = new Date(now.setDate(firstDayOfWeek));
           startDate.setHours(0, 0, 0, 0);
-
           endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + 6);
           endDate.setHours(23, 59, 59, 999);
@@ -55,11 +47,10 @@ export async function GET(request: Request) {
         case 'monthly':
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
           startDate.setHours(0, 0, 0, 0);
-
           endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
           endDate.setHours(23, 59, 59, 999);
           break;
-        default: // 'today' or fallback
+        default: // today
           startDate = new Date();
           startDate.setHours(0, 0, 0, 0);
           endDate.setHours(23, 59, 59, 999);
@@ -77,29 +68,26 @@ export async function GET(request: Request) {
       .reduce((sum, sale) => sum + sale.amount, 0);
 
     const qrSales = periodSales
-      .filter((sale) => sale.paymentMethod === "qr-code")
+      .filter((sale) => sale.paymentMethod === "qr-code" || sale.paymentMethod === "qr")
       .reduce((sum, sale) => sum + sale.amount, 0);
 
     const cardSales = periodSales
       .filter((sale) => sale.paymentMethod === "card")
       .reduce((sum, sale) => sum + sale.amount, 0);
 
+    const totalBills = periodSales.reduce((sum, sale) => sum + 1 + (sale.editCount || 0), 0);
     const totalProfit = periodSales.reduce((sum, sale) => sum + (sale.profit || 0), 0);
-
     const totalSales = cashSales + qrSales + cardSales;
-    const billsCount = periodSales.length;
 
-    const result = {
+    return NextResponse.json({
       total: totalSales,
       cash: cashSales,
       qr: qrSales,
       card: cardSales,
       profit: totalProfit,
-      bills: billsCount,
+      bills: totalBills,
       lastUpdated: new Date().toISOString(),
-    };
-
-    return NextResponse.json(result);
+    });
 
   } catch (error) {
     console.error("Failed to fetch sales data:", error);
@@ -108,10 +96,8 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST: Securely creates a sale and assigns it to the currently logged-in user.
- * This is a named export, which is correct.
+ * POST: Securely creates a sale with items and customer phone
  */
-
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -122,7 +108,9 @@ export async function POST(request: Request) {
     const tenantId = session.user.email;
     await dbConnect();
 
-    const { amount, paymentMethod, profit } = await request.json();
+    const { amount, paymentMethod, profit, items, customerPhone, customerName, merchantName, discount } = await request.json();
+    console.log("Creating Sale:", { billId: `BILL-${Date.now()}`, amount, customerPhone, customerName });
+
     if (!amount || !paymentMethod) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
@@ -136,6 +124,11 @@ export async function POST(request: Request) {
       amount,
       paymentMethod,
       profit: profit || 0,
+      customerPhone: customerPhone || "",
+      customerName: customerName || "",
+      merchantName: merchantName || "",
+      discount: discount || 0,
+      items: items || [],
     });
 
     await newSale.save();
@@ -145,7 +138,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
   }
 }
-
-
-// CRITICAL FIX: Make sure there are NO other exports below this line.
-// Especially, ensure there is NO 'export default ...' line in this file.

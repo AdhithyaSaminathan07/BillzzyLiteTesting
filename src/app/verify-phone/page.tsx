@@ -75,7 +75,7 @@ export default function VerifyPhonePage() {
             } else {
                 setError(data.message || 'Invalid OTP');
             }
-        } catch (err) {
+        } catch {
             setError('An error occurred. Please try again.');
         } finally {
             setIsLoading(false);

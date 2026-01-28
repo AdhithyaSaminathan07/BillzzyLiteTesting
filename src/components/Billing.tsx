@@ -160,7 +160,7 @@ export default function BillingPage() {
             const parsedData = JSON.parse(savedData);
             setMerchantUpi(parsedData.merchantUpiId || '');
             setMerchantName(parsedData.shopName || 'Billzzy Lite');
-          } catch (e) { /* ignore */ }
+          } catch { /* ignore */ }
         }
         return true;
       }
@@ -199,7 +199,7 @@ export default function BillingPage() {
         const data: InventoryProduct[] = await res.json();
         const productsWithGst = data.map(p => ({ ...p, gstRate: p.gstRate || 0 }));
         setInventory(productsWithGst);
-      } catch (err) { setInventory([]); }
+      } catch { setInventory([]); }
     })();
   }, [status]);
 
@@ -495,7 +495,12 @@ export default function BillingPage() {
           body: JSON.stringify({
             amount: totalAmount,
             paymentMethod: selectedPayment,
-            profit: totalProfit
+            profit: totalProfit,
+            items: safeCart,
+            customerPhone: whatsAppNumber,
+            customerName: customerName,
+            merchantName: merchantName,
+            discount: discountAmount
           })
         });
 
@@ -542,7 +547,7 @@ export default function BillingPage() {
       setIsCreatingLink(false);
       setIsMessaging(false);
     }
-  }, [selectedPayment, totalAmount, cart, handleTransactionDone, whatsAppNumber, sendWhatsAppReceipt, customerName]);
+  }, [selectedPayment, totalAmount, cart, handleTransactionDone, whatsAppNumber, sendWhatsAppReceipt, customerName, merchantName, discountAmount]);
 
   const toggleScanner = React.useCallback(() => {
     setScanning(prev => { if (!prev) { setScannerError(''); } return !prev; });
