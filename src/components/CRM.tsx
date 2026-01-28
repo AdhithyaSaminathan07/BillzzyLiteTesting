@@ -30,9 +30,7 @@ export default function CRMComponent() {
       try {
         setLoading(true);
         const response = await fetch('/api/customers');
-        if (!response.ok) {
-          throw new Error('Failed to fetch customers');
-        }
+        if (!response.ok) throw new Error('Failed to fetch customers');
         const data = await response.json();
         setCustomers(data);
         setFilteredCustomers(data);
@@ -42,7 +40,6 @@ export default function CRMComponent() {
         setLoading(false);
       }
     };
-
     fetchCustomers();
   }, []);
 
@@ -51,60 +48,62 @@ export default function CRMComponent() {
     
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(customer => 
-        customer.name.toLowerCase().includes(term) || 
-        customer.phoneNumber.includes(term)
+      result = result.filter(
+        (customer) =>
+          customer.name.toLowerCase().includes(term) ||
+          customer.phoneNumber.includes(term)
       );
     }
     
     if (dateFilter.startDate || dateFilter.endDate) {
-      result = result.filter(customer => {
+      result = result.filter((customer) => {
         const customerDate = new Date(customer.createdAt);
-        
+
         if (dateFilter.startDate && dateFilter.endDate) {
           const startDate = new Date(dateFilter.startDate);
           const endDate = new Date(dateFilter.endDate);
           endDate.setHours(23, 59, 59, 999); 
           return customerDate >= startDate && customerDate <= endDate;
         } else if (dateFilter.startDate) {
-          const startDate = new Date(dateFilter.startDate);
-          return customerDate >= startDate;
+          return customerDate >= new Date(dateFilter.startDate);
         } else if (dateFilter.endDate) {
           const endDate = new Date(dateFilter.endDate);
           endDate.setHours(23, 59, 59, 999); 
           return customerDate <= endDate;
         }
-        
         return true;
       });
     }
-    
+
     setFilteredCustomers(result);
   }, [searchTerm, dateFilter, customers]);
 
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
   const handleDeleteCustomer = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to delete this customer?')) return;
 
     try {
       setDeletingId(id);
       const response = await fetch(`/api/customers`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete customer');
-      }
+      if (!response.ok) throw new Error('Failed to delete customer');
+
+      const updated = customers.filter((c) => c._id !== id);
+      setCustomers(updated);
+
+      let result = [...updated];
 
       const updatedCustomers = customers.filter(customer => customer._id !== id);
       setCustomers(updatedCustomers);
@@ -156,12 +155,12 @@ export default function CRMComponent() {
     }
     
     autoTable(doc, {
-      startY: filterText ? 45 : 40,
+      startY: 35,
       head: [['Name', 'Phone Number', 'Added Date']],
-      body: filteredCustomers.map(customer => [
-        customer.name,
-        customer.phoneNumber,
-        formatDate(customer.createdAt)
+      body: filteredCustomers.map((c) => [
+        c.name,
+        c.phoneNumber,
+        formatDate(c.createdAt)
       ]),
       styles: { fontSize: 10 },
       headStyles: { fillColor: [79, 70, 229] }
@@ -203,9 +202,6 @@ export default function CRMComponent() {
             disabled={loading || filteredCustomers.length === 0}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
             Export PDF
           </button>
         </div>
@@ -267,6 +263,39 @@ export default function CRMComponent() {
               </button>
             )}
           </div>
+
+          {/* Date Filters */}
+          <div className="flex gap-2 items-center text-xs">
+            <span>Date:</span>
+            <input
+              type="date"
+              value={dateFilter.startDate}
+              onChange={(e) =>
+                setDateFilter({ ...dateFilter, startDate: e.target.value })
+              }
+              className="border rounded p-1 text-xs"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={dateFilter.endDate}
+              onChange={(e) =>
+                setDateFilter({ ...dateFilter, endDate: e.target.value })
+              }
+              className="border rounded p-1 text-xs"
+            />
+          </div>
+
+          {(searchTerm || dateFilter.startDate || dateFilter.endDate) && (
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={handleResetFilters}
+                className="text-xs text-indigo-600"
+              >
+                Reset
+              </button>
+            </div>
+          )}
         </div>
       </div>
       
