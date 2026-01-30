@@ -31,7 +31,6 @@ type Period = "Today" | "Weekly" | "Monthly";
 
 // --- CONSTANTS ---
 const LOW_STOCK_THRESHOLD = 10;
-const REFETCH_INTERVAL = 15000; // 15 seconds
 
 // --- COMPONENT ---
 export default function Dashboard() {
@@ -52,7 +51,7 @@ export default function Dashboard() {
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  // Effect to fetch sales data
+  // Effect to fetch sales data (Triggered by period change or auth status)
   useEffect(() => {
     if (status !== 'authenticated') {
       setIsSalesLoading(false);
@@ -76,12 +75,10 @@ export default function Dashboard() {
     };
 
     fetchSales();
-    const interval = setInterval(fetchSales, REFETCH_INTERVAL);
-    return () => clearInterval(interval);
-
+    // Auto-refresh interval removed as requested
   }, [activePeriod, status]);
 
-  // Effect to fetch inventory summary
+  // Effect to fetch inventory summary (Triggered by auth status)
   useEffect(() => {
     if (status !== 'authenticated') {
       setIsSummaryLoading(false);
@@ -117,9 +114,7 @@ export default function Dashboard() {
     };
 
     fetchInventorySummary();
-    const interval = setInterval(fetchInventorySummary, REFETCH_INTERVAL);
-    return () => clearInterval(interval);
-
+    // Auto-refresh interval removed as requested
   }, [status]);
 
   const TABS: Period[] = ["Today", "Weekly", "Monthly"];
