@@ -100,13 +100,12 @@ export default function CRMComponent() {
 
       if (!response.ok) throw new Error('Failed to delete customer');
 
+      // Update local state
       const updated = customers.filter((c) => c._id !== id);
       setCustomers(updated);
+      // Note: The useEffect above will automatically update filteredCustomers
+      // when 'customers' state changes.
 
-      let result = [...updated];
-
-      const updatedCustomers = customers.filter(customer => customer._id !== id);
-      setCustomers(updatedCustomers);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete customer');
     } finally {

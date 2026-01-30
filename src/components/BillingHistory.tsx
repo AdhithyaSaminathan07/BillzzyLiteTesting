@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Calendar, Filter, X, Receipt, Wallet, CreditCard,
-  Smartphone, Pencil, Send, Loader2, Package, ChevronDown, ChevronUp,
-  TrendingUp, CalendarDays, CalendarRange, Tag
+  Filter, X, Receipt,
+  Smartphone, Pencil, Send, Loader2, Tag
 } from 'lucide-react';
 
 interface BillItem {
@@ -62,7 +61,9 @@ export default function BillingHistory() {
 
   const handleQuickFilter = (type: TimeFilter) => {
     const today = new Date();
-    let start = new Date();
+    // FIX: Changed 'let' to 'const' because 'start' object is mutated, not reassigned
+    const start = new Date(); 
+    
     if (type === 'today') {
       const dateStr = getToday();
       fetchHistory(dateStr, dateStr, 'today');
