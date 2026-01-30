@@ -513,6 +513,8 @@ const Inventory: FC = () => {
         return result;
     }, [products, searchQuery, activeFilter]);
 
+
+    // Use the parentRef for the wrapper now
     const parentRef = useRef<HTMLDivElement>(null);
     const rowVirtualizer = useVirtualizer({ count: filteredProducts.length, getScrollElement: () => parentRef.current, estimateSize: () => 90, overscan: 5 });
 
@@ -682,7 +684,7 @@ const Inventory: FC = () => {
         return (
             <>
                 <DesktopProductTable products={filteredProducts} onEdit={(p) => setModalState({ isOpen: true, product: p })} onDelete={handleDeleteProduct} updatedProductInfo={updatedProductInfo} />
-                <div ref={parentRef} className="md:hidden pb-20 h-[calc(100vh-280px)] overflow-y-auto">
+                <div className="md:hidden">
                     <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {rowVirtualizer.getVirtualItems().map(virtualItem => (
                             <div key={virtualItem.key} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: `${virtualItem.size}px`, transform: `translateY(${virtualItem.start}px)`, padding: '4px 0' }}>
@@ -699,65 +701,72 @@ const Inventory: FC = () => {
         return <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 font-sans"><div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#5a4fcf]" /></div></div>;
     }
 
+
+
+
     return (
-        <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 font-sans">
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4">
-                <div>
-                    <h1 className="text-xl md:text-3xl font-bold text-gray-900">Inventory</h1>
-                    <p className="hidden md:block text-sm text-gray-600">Search, upload, or manage products manually.</p>
+        <div className="h-full flex flex-col font-sans px-3 sm:px-6 lg:px-8 bg-gray-50 overflow-hidden">
+            <div className="flex-none pt-4 bg-gray-50 z-10">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4">
+                    <div>
+                        <h1 className="text-xl md:text-3xl font-bold text-gray-900">Inventory</h1>
+                        <p className="hidden md:block text-sm text-gray-600">Search, upload, or manage products manually.</p>
+                    </div>
+                    <div className="relative w-full md:w-auto order-first md:order-none">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-[#5a4fcf] focus:border-[#5a4fcf] outline-none transition-all" />
+                    </div>
+                    <div className="hidden sm:flex items-center gap-3">
+                        <label className="flex items-center cursor-pointer bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm"><Upload className="w-4 h-4 mr-2" /> Upload Excel<input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" /></label>
+                        <button onClick={() => setModalState({ isOpen: true, product: null })} className="flex items-center gap-1 bg-[#5a4fcf] hover:bg-[#4a3fb5] text-white px-4 py-2 rounded-md text-sm"><Plus className="w-4 h-4" /> Add Product</button>
+                    </div>
                 </div>
-                <div className="relative w-full md:w-auto order-first md:order-none">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-[#5a4fcf] focus:border-[#5a4fcf] outline-none transition-all" />
-                </div>
-                <div className="hidden sm:flex items-center gap-3">
-                    <label className="flex items-center cursor-pointer bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm"><Upload className="w-4 h-4 mr-2" /> Upload Excel<input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" /></label>
-                    <button onClick={() => setModalState({ isOpen: true, product: null })} className="flex items-center gap-1 bg-[#5a4fcf] hover:bg-[#4a3fb5] text-white px-4 py-2 rounded-md text-sm"><Plus className="w-4 h-4" /> Add Product</button>
+
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+                    <button
+                        onClick={() => setActiveFilter('all')}
+                        className={`${activeFilter === 'all' ? 'ring-2 ring-[#5a4fcf] bg-indigo-100' : 'bg-indigo-50'} border border-indigo-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
+                    >
+                        <div className="p-1.5 sm:p-3 bg-[#5a4fcf] rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
+                            <Package className="w-4 h-4 sm:w-6 sm:h-6" />
+                        </div>
+                        <div className="text-center sm:text-left">
+                            <p className="text-[10px] sm:text-xs font-semibold text-indigo-600 uppercase tracking-tight sm:tracking-wider">All Stock</p>
+                            <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.totalProducts}</p>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveFilter('low')}
+                        className={`${activeFilter === 'low' ? 'ring-2 ring-orange-500 bg-orange-100' : 'bg-orange-50'} border border-orange-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
+                    >
+                        <div className="p-1.5 sm:p-3 bg-orange-500 rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
+                            <AlertTriangle className="w-4 h-4 sm:w-6 sm:h-6" />
+                        </div>
+                        <div className="text-center sm:text-left">
+                            <p className="text-[10px] sm:text-xs font-semibold text-orange-600 uppercase tracking-tight sm:tracking-wider">Low Stock</p>
+                            <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.lowStock}</p>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveFilter('out')}
+                        className={`${activeFilter === 'out' ? 'ring-2 ring-red-500 bg-red-100' : 'bg-red-50'} border border-red-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
+                    >
+                        <div className="p-1.5 sm:p-3 bg-red-500 rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
+                            <AlertCircle className="w-4 h-4 sm:w-6 sm:h-6" />
+                        </div>
+                        <div className="text-center sm:text-left">
+                            <p className="text-[10px] sm:text-xs font-semibold text-red-600 uppercase tracking-tight sm:tracking-wider">Out Stock</p>
+                            <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.outOfStock}</p>
+                        </div>
+                    </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
-                <button
-                    onClick={() => setActiveFilter('all')}
-                    className={`${activeFilter === 'all' ? 'ring-2 ring-[#5a4fcf] bg-indigo-100' : 'bg-indigo-50'} border border-indigo-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
-                >
-                    <div className="p-1.5 sm:p-3 bg-[#5a4fcf] rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
-                        <Package className="w-4 h-4 sm:w-6 sm:h-6" />
-                    </div>
-                    <div className="text-center sm:text-left">
-                        <p className="text-[10px] sm:text-xs font-semibold text-indigo-600 uppercase tracking-tight sm:tracking-wider">All Stock</p>
-                        <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.totalProducts}</p>
-                    </div>
-                </button>
-
-                <button
-                    onClick={() => setActiveFilter('low')}
-                    className={`${activeFilter === 'low' ? 'ring-2 ring-orange-500 bg-orange-100' : 'bg-orange-50'} border border-orange-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
-                >
-                    <div className="p-1.5 sm:p-3 bg-orange-500 rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
-                        <AlertTriangle className="w-4 h-4 sm:w-6 sm:h-6" />
-                    </div>
-                    <div className="text-center sm:text-left">
-                        <p className="text-[10px] sm:text-xs font-semibold text-orange-600 uppercase tracking-tight sm:tracking-wider">Low Stock</p>
-                        <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.lowStock}</p>
-                    </div>
-                </button>
-
-                <button
-                    onClick={() => setActiveFilter('out')}
-                    className={`${activeFilter === 'out' ? 'ring-2 ring-red-500 bg-red-100' : 'bg-red-50'} border border-red-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
-                >
-                    <div className="p-1.5 sm:p-3 bg-red-500 rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
-                        <AlertCircle className="w-4 h-4 sm:w-6 sm:h-6" />
-                    </div>
-                    <div className="text-center sm:text-left">
-                        <p className="text-[10px] sm:text-xs font-semibold text-red-600 uppercase tracking-tight sm:tracking-wider">Out Stock</p>
-                        <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.outOfStock}</p>
-                    </div>
-                </button>
+            <div ref={parentRef} className="flex-1 overflow-y-auto min-h-0 pb-20 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                {renderContent()}
             </div>
-
-            {renderContent()}
 
             <div className="sm:hidden fixed bottom-20 right-3 flex flex-col items-center gap-2.5 z-40">
                 <label className="w-12 h-12 flex items-center justify-center cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg border-2 border-white"><Upload className="w-5 h-5" /><input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" /></label>
