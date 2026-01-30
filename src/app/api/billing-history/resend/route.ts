@@ -66,9 +66,9 @@ export async function POST(req: Request) {
     let cleanPhone = newPhone.replace(/\D/g, '');
     if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
 
-    // Fix: Handle items safely
+    // Fix: Handle items safely - Replaced 'any' with specific type
     const itemsList = updatedSale.items
-      ? updatedSale.items.map((i: any) => `${i.name} (x${i.quantity})`).join(', ')
+      ? updatedSale.items.map((i: { name: string; quantity: number }) => `${i.name} (x${i.quantity})`).join(', ')
       : 'Items';
 
     let templateName = 'payment_receipt_cashh';
