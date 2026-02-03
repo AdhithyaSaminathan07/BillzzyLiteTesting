@@ -4,6 +4,8 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Package, AlertTriangle, XCircle, Loader2, TrendingUp, Wallet, CreditCard } from "lucide-react";
+// 1. IMPORT THE CHART
+import StockStyleSalesChart from "./StockStyleSalesChart"; 
 
 // --- TYPE DEFINITIONS ---
 type SalesData = {
@@ -51,7 +53,6 @@ export default function Dashboard() {
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  // Effect to fetch sales data (Triggered by period change or auth status)
   useEffect(() => {
     if (status !== 'authenticated') {
       setIsSalesLoading(false);
@@ -75,10 +76,8 @@ export default function Dashboard() {
     };
 
     fetchSales();
-    // Auto-refresh interval removed as requested
   }, [activePeriod, status]);
 
-  // Effect to fetch inventory summary (Triggered by auth status)
   useEffect(() => {
     if (status !== 'authenticated') {
       setIsSummaryLoading(false);
@@ -114,14 +113,13 @@ export default function Dashboard() {
     };
 
     fetchInventorySummary();
-    // Auto-refresh interval removed as requested
   }, [status]);
 
   const TABS: Period[] = ["Today", "Weekly", "Monthly"];
 
   return (
     <div className="h-full bg-gray-50 overflow-y-auto p-2.5 pb-20">
-      <div className="max-w-2xl mx-auto space-y-2.5">
+      <div className="max-w-2xl mx-auto space-y-4"> {/* Increased spacing slightly */}
 
         {/* Sales Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3.5">
@@ -211,6 +209,9 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* 2. INSERT THE GRAPH HERE */}
+        <StockStyleSalesChart />
 
         {/* Inventory Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3.5">

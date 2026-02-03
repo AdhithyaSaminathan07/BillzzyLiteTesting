@@ -11,6 +11,7 @@ export interface IUser extends Document {
   pin?: string; // unique PIN for client report access
   verificationOtp?: string; // OTP for phone verification
   verificationOtpExpires?: Date; // Expiry time for OTP
+  salesTarget: number;
 }
 
 const UserSchema: Schema = new Schema({
@@ -61,6 +62,10 @@ const UserSchema: Schema = new Schema({
   verificationOtpExpires: {
     type: Date,
     select: false,
+  },
+  salesTarget: {
+    type: Number,
+    default: 10000, // Default target
   },
 }, {
   timestamps: true,
