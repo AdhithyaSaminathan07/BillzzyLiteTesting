@@ -14,7 +14,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const userEmail = session.user.email;
-    
+
     await connectToDatabase();
 
     // 2. Get Date Range from Frontend
@@ -22,27 +22,44 @@ export async function GET(req: Request) {
     const range = searchParams.get("range") || "1D";
 
     let startDate = new Date();
+    let endDate = new Date(); // Default to now
     const today = new Date();
 
     switch (range) {
-      case "1D": startDate = startOfDay(today); break;
-      case "5D": startDate = subDays(today, 5); break;
+      case "1D":
+        startDate = startOfDay(today);
+        endDate = new Date(); // till now
+        break;
+      case "Yesterday":
+        startDate = startOfDay(subDays(today, 1));
+        endDate = startOfDay(today);
+        break;
+      case "7D": startDate = subDays(today, 6); break; // 6 days ago + today = 7 days
       case "1M": startDate = subMonths(today, 1); break;
       case "YTD": startDate = startOfYear(today); break;
       case "1Y": startDate = subYears(today, 1); break;
       case "5Y": startDate = subYears(today, 5); break;
       case "MAX": startDate = new Date(0); break;
-      default: startDate = startOfDay(today);
+      default:
+        startDate = startOfDay(today);
+        endDate = new Date();
     }
 
     // 3. Fetch Every Individual Bill
     // We filter by tenantId (email) and the date range.
-    const salesData = await Sale.find({
+    const query: { tenantId: string; createdAt: { $gte: Date; $lt?: Date } } = {
       tenantId: userEmail,
       createdAt: { $gte: startDate }
-    })
-    .sort({ createdAt: 1 }) // Sort oldest to newest
-    .select("amount createdAt"); // Select 'amount' to match your Schema
+    };
+
+    // For Yesterday, we need an upper bound (less than today start)
+    if (range === "Yesterday") {
+      query.createdAt.$lt = endDate;
+    }
+
+    const salesData = await Sale.find(query)
+      .sort({ createdAt: 1 }) // Sort oldest to newest
+      .select("amount createdAt"); // Select 'amount' to match your Schema
 
     // 4. Format and Send to Frontend
     const formatted = salesData.map((item) => ({

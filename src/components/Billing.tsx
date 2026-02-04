@@ -9,6 +9,7 @@ import {
   CreditCard, CheckCircle, DollarSign, MessageSquare,
   Nfc
 } from 'lucide-react';
+import SuccessTick from './ui/SuccessTick';
 
 // --- HELPER FUNCTIONS ---
 const formatCurrency = (amount: number): string => {
@@ -92,6 +93,8 @@ export default function BillingPage() {
   const [inventory, setInventory] = React.useState<InventoryProduct[]>([]);
   const [suggestions, setSuggestions] = React.useState<InventoryProduct[]>([]);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = React.useState(false);
+  const [isNfcSuccess, setIsNfcSuccess] = React.useState(false);
 
   // States for flow
   const [showWhatsAppSharePanel, setShowWhatsAppSharePanel] = React.useState(false);
@@ -148,29 +151,43 @@ export default function BillingPage() {
   const upiQR = merchantUpi ? `upi://pay?pa=${merchantUpi}&pn=${encodeURIComponent(merchantName)}&am=${totalAmount.toFixed(2)}&cu=INR&tn=Bill%20Payment` : '';
 
   // Check Phone Number
-  const checkPhoneNumber = React.useCallback(() => {
+  // Check Phone Number & Settings
+  const checkPhoneNumber = React.useCallback(async () => {
     if (status === 'authenticated' && session?.user?.email) {
-      // 1. Check Session first (Source of Truth for Phone)
-      if (session.user.phoneNumber) {
-        setSettingsComplete(true);
-        // We still need merchant details from local storage if available
-        const savedData = localStorage.getItem(`userSettings-${session.user.email}`);
-        if (savedData) {
-          try {
-            const parsedData = JSON.parse(savedData);
-            setMerchantUpi(parsedData.merchantUpiId || '');
-            setMerchantName(parsedData.shopName || 'Billzzy Lite');
-          } catch { /* ignore */ }
+      // 1. Try to fetch fresh settings from DB
+      try {
+        const res = await fetch('/api/users/settings');
+        if (res.ok) {
+          const data = await res.json();
+          // Update local storage to keep it in sync
+          const localData = {
+            name: data.name || session.user.name || '',
+            phoneNumber: data.phoneNumber || '',
+            address: data.address || '',
+            shopName: data.shopName || '',
+            shopAddress: data.shopAddress || '',
+            merchantUpiId: data.merchantUpiId || '',
+          };
+          localStorage.setItem(`userSettings-${session.user.email}`, JSON.stringify(localData));
+
+          if (localData.phoneNumber) {
+            setSettingsComplete(true);
+            setMerchantUpi(localData.merchantUpiId);
+            setMerchantName(localData.shopName || 'Billzzy Lite');
+            return true;
+          }
         }
-        return true;
+      } catch (e) {
+        console.error("Failed to fetch settings from DB, falling back to local", e);
       }
 
-      // 2. Fallback to Local Storage (Legacy behavior)
+      // 2. Fallback to Local Storage/Session (Legacy behavior)
       const savedData = localStorage.getItem(`userSettings-${session.user.email}`);
       if (savedData) {
         try {
           const parsedData = JSON.parse(savedData);
-          const phoneNumber = parsedData.phoneNumber || '';
+          const phoneNumber = parsedData.phoneNumber || session.user.phoneNumber || '';
+
           if (phoneNumber && phoneNumber.trim() !== '' && /^\d{10,15}$/.test(phoneNumber)) {
             setSettingsComplete(true);
             setMerchantUpi(parsedData.merchantUpiId || '');
@@ -180,7 +197,11 @@ export default function BillingPage() {
         } catch (error) {
           console.error('Error parsing settings data:', error);
         }
+      } else if (session.user.phoneNumber) {
+        setSettingsComplete(true);
+        return true;
       }
+
       setSettingsComplete(false);
       return false;
     }
@@ -403,6 +424,7 @@ export default function BillingPage() {
     setWhatsAppNumber('');
     setAmountGiven('');
     setDiscountInput('');
+    setIsNfcSuccess(false);
     setModal({ ...modal, isOpen: false });
   }, [modal]);
 
@@ -522,18 +544,18 @@ export default function BillingPage() {
         window.location.href = bridgeUrl;
       }
 
-      // 7. Show Success Modal
-      setModal({
-        isOpen: true,
-        title: 'Success!',
-        message: useNfc
-          ? 'Inventory updated. Tap your card to finish.'
-          : 'Transaction completed! Receipt sent via WhatsApp.',
-        confirmText: 'New Bill',
-        onConfirm: handleTransactionDone,
-        showCancel: false
-      });
+      // 7. Show Success Animation
+      if (useNfc) setIsNfcSuccess(true);
+      setShowSuccessAnimation(true);
+      // The SuccessTick component will call handleTransactionDone (or we can chain it)
+      // For now, we rely on the onComplete callback of SuccessTick to show the final modal or reset.
 
+      // NOTE: We refrain from showing the "Success!" modal here immediately.
+      // Instead, we wait for the animation.
+
+      // Let's rely on the animation onComplete to trigger the next step.
+      // However, we need to pass the "modal setting" logic to that callback or use an effect.
+      // To keep it simple, I will Define a "finisher" function.
     } catch (error) {
       console.error("Payment Process Error:", error);
       setModal({
@@ -553,8 +575,24 @@ export default function BillingPage() {
     setScanning(prev => { if (!prev) { setScannerError(''); } return !prev; });
   }, []);
 
+  const onSuccessAnimationComplete = React.useCallback(() => {
+    setShowSuccessAnimation(false);
+
+    // DIRECTLY RESET - SKIP MODAL
+    // GPay style: The tick was the feedback. Now we just prep for next customer.
+    // If we want to show a "New Bill" button explicitly we would need a clean state, 
+    // but the user said "remove the modal pop".
+    // So we just call handleTransactionDone() which clears the cart.
+
+    handleTransactionDone();
+
+    // Optional: If we want to stay on the "success screen" (tick) longer, the component handles that duration.
+    // When it calls onComplete, we interpret that as "user is done watching, next".
+  }, [handleTransactionDone]);
+
   return (
     <>
+      {showSuccessAnimation && <SuccessTick onComplete={onSuccessAnimationComplete} amount={totalAmount} />}
       <div className="h-full flex flex-col bg-gray-50">
         {!settingsComplete && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">

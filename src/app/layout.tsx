@@ -10,13 +10,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <title>Billzzy Lite</title>
         <meta name="description" content="A lightweight billing PWA" />
-        
+
         {/* Viewport that allows user zooming for better accessibility */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
         {/* --- PWA and Apple Tags --- */}
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0ea5e9" />
+        <meta name="theme-color" content="#5a4fcf" />
 
         {/* --- Tags for Apple devices --- */}
         <meta name="apple-mobile-web-app-capable" content="yes" />

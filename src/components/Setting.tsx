@@ -142,63 +142,6 @@
 //     isOpen: false,
 //     title: '',
 //     message: '',
-//     type: 'info'
-//   });
-
-//   const closeModal = () => setModalState(prev => ({ ...prev, isOpen: false }));
-
-//   const loadFormData = useCallback(async () => {
-//     if (session?.user?.email) {
-//       try {
-//         const response = await fetch(`/api/users/check?email=${encodeURIComponent(session.user.email)}`);
-//         if (response.ok) {
-//           const userData = await response.json();
-//           setIsNewUser(!userData.hasData);
-
-//           if (!userData.hasData) {
-//             localStorage.removeItem(`userSettings-${session.user.email}`);
-//           }
-//         }
-//       } catch (error) {
-//         console.error('Error checking user data:', error);
-//       }
-
-//       const savedData = localStorage.getItem(`userSettings-${session.user.email}`);
-//       if (savedData) {
-//         const parsed = JSON.parse(savedData);
-//         // If session has verified phone but local storage doesn't (or is different), update local
-//         if (session.user.phoneNumber && parsed.phoneNumber !== session.user.phoneNumber) {
-//           parsed.phoneNumber = session.user.phoneNumber;
-//           localStorage.setItem(`userSettings-${session.user.email}`, JSON.stringify(parsed));
-//         }
-//         setFormData(parsed);
-//       } else {
-//         // Init with session data
-//         const initialData = {
-//           name: session.user.name || '',
-//           phoneNumber: session.user.phoneNumber || '',
-//           address: '',
-//           shopName: '',
-//           shopAddress: '',
-//           merchantUpiId: '',
-//         };
-//         // Save to local storage immediately so other tabs/components can see it
-//         localStorage.setItem(`userSettings-${session.user.email}`, JSON.stringify(initialData));
-//         setFormData(initialData);
-//       }
-//     }
-//   }, [session]);
-
-//   useEffect(() => {
-//     if (status === 'authenticated') {
-//       loadFormData();
-//     }
-//   }, [status, loadFormData]);
-
-//   useEffect(() => {
-//     if (status === 'unauthenticated') {
-//       router.push('/');
-//     }
 //   }, [status, router]);
 
 //   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -525,27 +468,39 @@ export default function Settings() {
 
   const loadFormData = useCallback(async () => {
     if (session?.user?.email) {
+      // 1. Try to fetch from DB first (Single Source of Truth)
       try {
-        const response = await fetch(`/api/users/check?email=${encodeURIComponent(session.user.email)}`);
+        const response = await fetch('/api/users/settings');
         if (response.ok) {
-          const userData = await response.json();
-          if (!userData.hasData) {
-            localStorage.removeItem(`userSettings-${session.user.email}`);
-          }
+          const dbData = await response.json();
+
+          const mergedData: FormData = {
+            name: dbData.name || session.user.name || '',
+            phoneNumber: dbData.phoneNumber || '',
+            address: dbData.address || '',
+            shopName: dbData.shopName || '',
+            shopAddress: dbData.shopAddress || '',
+            merchantUpiId: dbData.merchantUpiId || '',
+          };
+
+          setFormData(mergedData);
+          localStorage.setItem(`userSettings-${session.user.email}`, JSON.stringify(mergedData));
+          return;
         }
       } catch (error) {
-        console.error('Error checking user data:', error);
+        console.error('Error fetching settings from DB:', error);
       }
 
+      // 2. Fallback to Local Storage
       const savedData = localStorage.getItem(`userSettings-${session.user.email}`);
       if (savedData) {
         const parsed = JSON.parse(savedData);
-        if (session.user.phoneNumber && parsed.phoneNumber !== session.user.phoneNumber) {
+        if (session.user.phoneNumber && (!parsed.phoneNumber || parsed.phoneNumber !== session.user.phoneNumber)) {
           parsed.phoneNumber = session.user.phoneNumber;
-          localStorage.setItem(`userSettings-${session.user.email}`, JSON.stringify(parsed));
         }
         setFormData(parsed);
       } else {
+        // 3. Init from Session
         const initialData = {
           name: session.user.name || '',
           phoneNumber: session.user.phoneNumber || '',
@@ -583,23 +538,23 @@ export default function Settings() {
       return;
     }
 
+    // Still update local storage for immediate offline / quick access fallback
     localStorage.setItem(`userSettings-${session.user.email}`, JSON.stringify(formData));
 
     try {
-      if (sectionKey === 'personal') {
-        const response = await fetch('/api/users/phone', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phoneNumber: formData.phoneNumber }),
-        });
+      // Use the new centralized settings API for ALL sections
+      const response = await fetch('/api/users/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update phone number');
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update settings');
       }
 
-      setModalState({ isOpen: true, title: 'Success!', message: 'Settings saved successfully.', type: 'success' });
+      setModalState({ isOpen: true, title: 'Success!', message: 'Settings saved successfully to database.', type: 'success' });
     } catch (error) {
       console.error('Error saving data to database:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

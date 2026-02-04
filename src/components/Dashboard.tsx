@@ -4,8 +4,9 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Package, AlertTriangle, XCircle, Loader2, TrendingUp, Wallet, CreditCard } from "lucide-react";
-// 1. IMPORT THE CHART
-import StockStyleSalesChart from "./StockStyleSalesChart"; 
+// 1. IMPORT THE CHART DYNAMICALLY (Fixes 500 Error / SSR issues)
+import dynamic from 'next/dynamic';
+const StockStyleSalesChart = dynamic(() => import("./StockStyleSalesChart"), { ssr: false });
 
 // --- TYPE DEFINITIONS ---
 type SalesData = {
@@ -144,8 +145,8 @@ export default function Dashboard() {
                 key={tab}
                 onClick={() => setActivePeriod(tab)}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${activePeriod === tab
-                    ? "bg-[#5a4fcf] text-white"
-                    : "text-gray-600"
+                  ? "bg-[#5a4fcf] text-white"
+                  : "text-gray-600"
                   }`}
               >
                 {tab}

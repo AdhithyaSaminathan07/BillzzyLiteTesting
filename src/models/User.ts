@@ -12,6 +12,10 @@ export interface IUser extends Document {
   verificationOtp?: string; // OTP for phone verification
   verificationOtpExpires?: Date; // Expiry time for OTP
   salesTarget: number;
+  merchantUpiId?: string;
+  shopName?: string;
+  shopAddress?: string;
+  address?: string; // Personal address
 }
 
 const UserSchema: Schema = new Schema({
@@ -66,6 +70,22 @@ const UserSchema: Schema = new Schema({
   salesTarget: {
     type: Number,
     default: 10000, // Default target
+  },
+  merchantUpiId: {
+    type: String,
+    required: false,
+  },
+  shopName: {
+    type: String,
+    required: false,
+  },
+  shopAddress: {
+    type: String,
+    required: false,
+  },
+  address: {
+    type: String,
+    required: false,
   },
 }, {
   timestamps: true,
