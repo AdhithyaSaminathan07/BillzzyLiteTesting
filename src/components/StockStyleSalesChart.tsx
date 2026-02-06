@@ -533,6 +533,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Label
 } from "recharts";
+import { motion, LayoutGroup } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { Loader2, TrendingUp, TrendingDown, Target, Edit2, Check, X, Calendar as CalendarIcon } from "lucide-react";
 
@@ -709,7 +710,7 @@ export default function StockStyleSalesChart() {
   }
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 font-sanst">
+    <div className="bg-white p-4 rounded-xl shadow-sm font-sans">
       {/* HEADER */}
       <div className="mb-2 flex justify-between items-start">
         <div>
@@ -744,7 +745,7 @@ export default function StockStyleSalesChart() {
       </div>
 
       {/* GRAPH AREA */}
-      <div className="h-[240px] w-full mt-4 -ml-4">
+      <div className="h-[240px] w-full mt-4">
         {activeTab === 'Custom' ? (
           <div className="w-full h-full flex flex-col items-center justify-center text-center text-gray-400">
             <CalendarIcon className="w-10 h-10 mb-2 text-gray-300" />
@@ -753,7 +754,7 @@ export default function StockStyleSalesChart() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 30, right: 35, left: 10, bottom: 0 }}
+            <AreaChart data={data} margin={{ top: 30, right: 10, left: 10, bottom: 0 }}
               // FIXED: Re-added eslint-disable to fix the build error
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onMouseMove={(e: any) => { if (e.activePayload) setDisplayValue(e.activePayload[0].value); }}
@@ -796,18 +797,25 @@ export default function StockStyleSalesChart() {
 
       {/* FOOTER TABS */}
       <div className="flex gap-1 mt-6 bg-gray-100 p-0.5 rounded-lg">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${activeTab === tab
-              ? "bg-[#5a4fcf] text-white"
-              : "text-gray-600"
-              }`}
-          >
-            {tab}
-          </button>
-        ))}
+        <LayoutGroup>
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`relative flex-1 py-1.5 text-[10px] font-black rounded-md transition-colors z-10 ${activeTab === tab ? "text-white" : "text-gray-500 hover:text-gray-700"
+                }`}
+            >
+              {activeTab === tab && (
+                <motion.div
+                  layoutId="activeTab-graph"
+                  className="absolute inset-0 bg-gray-900 rounded-md -z-10 shadow-sm"
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                />
+              )}
+              {tab}
+            </button>
+          ))}
+        </LayoutGroup>
       </div>
     </div>
   );

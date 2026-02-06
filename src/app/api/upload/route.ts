@@ -10,6 +10,20 @@ cloudinary.config({
 });
 
 export async function POST(req: Request) {
+  // Check for missing environment variables
+  const missingVars = [];
+  if (!process.env.CLOUDINARY_CLOUD_NAME) missingVars.push('CLOUDINARY_CLOUD_NAME');
+  if (!process.env.CLOUDINARY_API_KEY) missingVars.push('CLOUDINARY_API_KEY');
+  if (!process.env.CLOUDINARY_API_SECRET) missingVars.push('CLOUDINARY_API_SECRET');
+
+  if (missingVars.length > 0) {
+    console.error(`Missing Cloudinary environment variables: ${missingVars.join(', ')}`);
+    return NextResponse.json({
+      success: false,
+      error: `Missing setup: ${missingVars.join(', ')}. Please check your .env.local file.`
+    }, { status: 500 });
+  }
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -45,9 +59,9 @@ export async function POST(req: Request) {
       uploadStream.end(buffer);
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      url: uploadResult.secure_url 
+    return NextResponse.json({
+      success: true,
+      url: uploadResult.secure_url
     });
 
   } catch (error) {

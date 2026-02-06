@@ -1,7 +1,7 @@
 // src/globals.d.ts
 
-import { DefaultSession, DefaultUser } from 'next-auth';
-import { JWT } from 'next-auth/jwt';
+// import { DefaultSession, DefaultUser } from 'next-auth';
+// import { JWT } from 'next-auth/jwt';
 
 // --- Type declarations for next-pwa (Existing) ---
 declare module "next-pwa" {
@@ -18,37 +18,4 @@ declare module "next-pwa" {
 }
 
 
-// --- Module augmentation for `next-auth` types (New) ---
-// This allows us to add custom properties to the session and user objects.
-declare module 'next-auth' {
-  /**
-   * This is the shape of the `session` object.
-   */
-  interface Session {
-    user: {
-      id: string;
-      role: 'user' | 'admin' | 'tenant';
-      tenantId?: string | null;
-      phoneNumber?: string | null;
-    } & DefaultSession['user']; // Keeps the default properties (name, email, image)
-  }
-
-  /**
-   * This is the shape of the `user` object passed to callbacks.
-   */
-  interface User extends DefaultUser {
-    role: 'user' | 'admin' | 'tenant';
-    tenantId?: string | null;
-    phoneNumber?: string | null;
-  }
-}
-
-declare module 'next-auth/jwt' {
-  /** This is the shape of the JWT token. */
-  interface JWT {
-    id: string;
-    role: 'user' | 'admin' | 'tenant';
-    tenantId?: string | null;
-    phoneNumber?: string | null;
-  }
-}
+// --- Module augmentation for `next-auth` types (Moved to src/next-auth.d.ts) ---

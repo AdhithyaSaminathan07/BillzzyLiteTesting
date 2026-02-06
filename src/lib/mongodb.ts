@@ -188,7 +188,7 @@ async function dbConnect() {
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
-const { uri, dbName } = getDbConfig(MONGODB_URI!);
+const { uri } = getDbConfig(MONGODB_URI!);
 
 if (process.env.NODE_ENV === 'development') {
   const globalWithMongo = global as typeof globalThis & {

@@ -3,24 +3,24 @@
 
 import React, { useState, useEffect } from "react";
 import { Poppins } from "next/font/google";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 const poppins = Poppins({
     weight: ["300", "400", "500", "600", "700"],
     subsets: ["latin"],
 });
 
+const navLinks = [
+    { name: "Comparison", href: "#comparison" },
+    { name: "Features", href: "#features" },
+    { name: "Pricing", href: "#pricing" },
+    { name: "FAQs", href: "#faq" },
+    { name: "Testimonials", href: "#testimonials" },
+];
+
 export default function Navbar() {
     const [isHovered, setIsHovered] = useState(false);
     const [activeSection, setActiveSection] = useState("");
-
-    const navLinks = [
-        { name: "Comparison", href: "#comparison" },
-        { name: "Features", href: "#features" },
-        { name: "Pricing", href: "#pricing" },
-        { name: "FAQs", href: "#faq" },
-        { name: "Testimonials", href: "#testimonials" },
-    ];
 
     const [isScrolled, setIsScrolled] = useState(false);
     const isCompact = isScrolled && !isHovered;

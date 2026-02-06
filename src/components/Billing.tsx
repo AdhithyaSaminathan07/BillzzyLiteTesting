@@ -94,7 +94,6 @@ export default function BillingPage() {
   const [suggestions, setSuggestions] = React.useState<InventoryProduct[]>([]);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
   const [showSuccessAnimation, setShowSuccessAnimation] = React.useState(false);
-  const [isNfcSuccess, setIsNfcSuccess] = React.useState(false);
 
   // States for flow
   const [showWhatsAppSharePanel, setShowWhatsAppSharePanel] = React.useState(false);
@@ -424,7 +423,6 @@ export default function BillingPage() {
     setWhatsAppNumber('');
     setAmountGiven('');
     setDiscountInput('');
-    setIsNfcSuccess(false);
     setModal({ ...modal, isOpen: false });
   }, [modal]);
 
@@ -545,7 +543,6 @@ export default function BillingPage() {
       }
 
       // 7. Show Success Animation
-      if (useNfc) setIsNfcSuccess(true);
       setShowSuccessAnimation(true);
       // The SuccessTick component will call handleTransactionDone (or we can chain it)
       // For now, we rely on the onComplete callback of SuccessTick to show the final modal or reset.
@@ -569,7 +566,7 @@ export default function BillingPage() {
       setIsCreatingLink(false);
       setIsMessaging(false);
     }
-  }, [selectedPayment, totalAmount, cart, handleTransactionDone, whatsAppNumber, sendWhatsAppReceipt, customerName, merchantName, discountAmount]);
+  }, [selectedPayment, totalAmount, cart, whatsAppNumber, sendWhatsAppReceipt, customerName, merchantName, discountAmount]);
 
   const toggleScanner = React.useCallback(() => {
     setScanning(prev => { if (!prev) { setScannerError(''); } return !prev; });

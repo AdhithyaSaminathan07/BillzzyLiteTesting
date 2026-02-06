@@ -73,7 +73,14 @@ export const authOptions: NextAuthOptions = {
           const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password);
           if (!isPasswordCorrect) return null;
 
-          return { id: user._id.toString(), email: user.email, name: user.name, role: user.role, tenantId: user.tenantId, phoneNumber: user.phoneNumber };
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            tenantId: user.tenantId?.toString(),
+            phoneNumber: user.phoneNumber
+          };
         } catch (error) {
           console.error("🔥 UNEXPECTED ERROR IN AUTHORIZE FUNCTION 🔥", error);
           return null;
@@ -94,19 +101,20 @@ export const authOptions: NextAuthOptions = {
         token.phoneNumber = user.phoneNumber;
       }
 
-      // Update token if session is updated (e.g. after phone verification)
-      if (trigger === "update" && session?.phoneNumber) {
-        token.phoneNumber = session.phoneNumber;
+      // Update token if session is updated
+      if (trigger === "update") {
+        if (session?.phoneNumber) token.phoneNumber = session.phoneNumber;
+        if (session?.name) token.name = session.name;
       }
 
       return token;
     },
     async session({ session, token }) {
       if (session.user && token) {
-        session.user.id = token.id;
+        session.user.id = token.id as string;
         session.user.role = token.role;
         session.user.tenantId = token.tenantId;
-        session.user.phoneNumber = token.phoneNumber;
+        session.user.phoneNumber = token.phoneNumber as string;
       }
       return session;
     },

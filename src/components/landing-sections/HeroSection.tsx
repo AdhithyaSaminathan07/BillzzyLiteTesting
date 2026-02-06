@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { ArrowRight, PlayCircle } from "lucide-react";
 import { Poppins } from "next/font/google";
 
@@ -19,17 +20,20 @@ export default function HeroPage() {
       ========================================================== */}
       <section className="relative w-full min-h-screen flex md:hidden flex-col overflow-hidden bg-[#B5A8D6]">
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src="/images/hero.png"
             alt="Background"
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
           />
         </div>
 
         <div className="relative z-20 pt-10 px-6">
-          <img
+          <Image
             src="/assets/lite-logo.png"
             alt="Billzzy Lite Logo"
+            width={200}
+            height={56}
             className="h-14 w-auto drop-shadow-2xl"
           />
         </div>
@@ -145,9 +149,11 @@ export default function HeroPage() {
             {/* MAIN IMAGE CARD */}
             <div className="relative transition-transform duration-500 group-hover:-translate-y-2">
               <div className="rounded-[2rem] overflow-hidden bg-white shadow-2xl border border-gray-100 ring-1 ring-black/5">
-                <img
+                <Image
                   src="/assets/desktop.png"
                   alt="Billzzy Lite Desktop Illustration"
+                  width={800}
+                  height={600}
                   className="w-full h-auto object-cover"
                 />
               </div>

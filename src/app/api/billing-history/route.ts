@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     }).sort({ createdAt: -1 });
 
     return NextResponse.json(bills);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
   }
 }

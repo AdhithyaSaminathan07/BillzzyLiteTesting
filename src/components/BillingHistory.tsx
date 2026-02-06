@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Filter, X, Receipt,
+  Filter, X, IndianRupee,
   Smartphone, Pencil, Send, Loader2, Tag
 } from 'lucide-react';
+import { motion, LayoutGroup } from "framer-motion";
 
 interface BillItem {
   name: string;
@@ -54,7 +55,7 @@ export default function BillingHistory() {
       const data = await res.json();
       setBills(data);
       setActiveTab(tab);
-    } catch (error) {
+    } catch {
       setBills([]);
     }
   };
@@ -62,8 +63,8 @@ export default function BillingHistory() {
   const handleQuickFilter = (type: TimeFilter) => {
     const today = new Date();
     // FIX: Changed 'let' to 'const' because 'start' object is mutated, not reassigned
-    const start = new Date(); 
-    
+    const start = new Date();
+
     if (type === 'today') {
       const dateStr = getToday();
       fetchHistory(dateStr, dateStr, 'today');
@@ -117,9 +118,14 @@ export default function BillingHistory() {
       {/* Header */}
       <div className="sticky top-0 z-20 bg-white border-b border-gray-100">
         <div className="px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Receipt className="w-5 h-5 text-indigo-600" />
-            <h1 className="text-base font-black text-gray-900">History</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-[#5a4fcf] rounded-lg flex items-center justify-center">
+              <IndianRupee className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-gray-900">History</h1>
+              <p className="text-xs text-gray-500">Transaction log</p>
+            </div>
           </div>
           <button onClick={() => setShowFilters(!showFilters)} className="p-2 text-indigo-600 bg-indigo-50 rounded-lg">
             {showFilters ? <X className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
@@ -127,18 +133,28 @@ export default function BillingHistory() {
         </div>
 
         {/* Quick Filter Boxes */}
-        <div className="px-3 pb-2 grid grid-cols-3 gap-2">
-          {['today', 'weekly', 'monthly'].map((id) => (
-            <button
-              key={id}
-              onClick={() => handleQuickFilter(id as TimeFilter)}
-              className={`py-2 rounded-xl border text-center transition-all ${
-                activeTab === id ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-100 text-gray-500'
-              }`}
-            >
-              <p className="text-[10px] font-black uppercase tracking-tighter">{id}</p>
-            </button>
-          ))}
+        <div className="px-3 pb-2">
+          <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
+            <LayoutGroup>
+              {['today', 'weekly', 'monthly'].map((id) => (
+                <button
+                  key={id}
+                  onClick={() => handleQuickFilter(id as TimeFilter)}
+                  className={`relative flex-1 py-2 text-center transition-colors z-10 rounded-md ${activeTab === id ? 'text-white' : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                >
+                  {activeTab === id && (
+                    <motion.div
+                      layoutId="activeTab-history"
+                      className="absolute inset-0 bg-indigo-600 rounded-md -z-10 shadow-sm"
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    />
+                  )}
+                  <p className="text-[10px] font-black uppercase tracking-tighter">{id}</p>
+                </button>
+              ))}
+            </LayoutGroup>
+          </div>
         </div>
 
         {showFilters && (
@@ -152,8 +168,8 @@ export default function BillingHistory() {
         )}
 
         <div className="px-3 py-1 bg-indigo-50/30 flex justify-between items-center text-[10px] font-bold">
-           <span className="text-gray-400 uppercase">{bills.length} BILLS</span>
-           <span className="text-indigo-700">TOTAL: ₹{bills.reduce((a, b) => a + b.amount, 0).toLocaleString()}</span>
+          <span className="text-gray-400 uppercase">{bills.length} BILLS</span>
+          <span className="text-indigo-700">TOTAL: ₹{bills.reduce((a, b) => a + b.amount, 0).toLocaleString()}</span>
         </div>
       </div>
 
@@ -163,14 +179,14 @@ export default function BillingHistory() {
           const isOpen = expandedBillId === (bill._id || bill.id);
           // Calculate subtotal before discount
           const subtotal = bill.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-          
+
           return (
             <div key={bill._id || index} className={`rounded-xl border transition-all ${bill.isEdited ? 'bg-red-50/50 border-red-100' : 'bg-white border-gray-100'}`}>
               <div className="p-2.5" onClick={() => setExpandedBillId(isOpen ? null : (bill._id || bill.id || ""))}>
                 <div className="flex justify-between items-start">
                   <div className="flex gap-2.5 overflow-hidden">
-                    <div className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center ${bill.isEdited ? 'bg-red-100 text-red-500' : 'bg-indigo-50 text-indigo-600'}`}>
-                      <Receipt className="w-5 h-5" />
+                    <div className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center ${bill.isEdited ? 'bg-red-100 text-red-500' : 'bg-indigo-50 text-indigo-600'}`}>
+                      <IndianRupee className="w-4 h-4" />
                     </div>
                     <div className="overflow-hidden">
                       <div className="flex items-center gap-1.5">
@@ -194,21 +210,20 @@ export default function BillingHistory() {
                     <div className={`mt-1.5 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md border inline-block ${getPaymentColor(bill.paymentMethod)}`}>
                       {bill.paymentMethod}
                     </div>
-                    
-                    <button 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setEditingBill(bill); 
-                          setNewPhone(bill.customerPhone || ''); 
-                        }}
-                        className={`mt-2 flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black transition-all active:scale-95 border ${
-                          bill.isEdited 
-                          ? 'bg-red-100 text-red-600 border-red-200' 
-                          : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100'
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingBill(bill);
+                        setNewPhone(bill.customerPhone || '');
+                      }}
+                      className={`mt-2 flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black transition-all active:scale-95 border ${bill.isEdited
+                        ? 'bg-red-100 text-red-600 border-red-200'
+                        : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100'
                         }`}
                     >
-                        <Pencil className="w-2.5 h-2.5" />
-                        EDIT
+                      <Pencil className="w-2.5 h-2.5" />
+                      EDIT
                     </button>
                   </div>
                 </div>
@@ -223,23 +238,23 @@ export default function BillingHistory() {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* TOTALS SECTION */}
                     <div className="border-t border-dashed border-gray-200 pt-2 space-y-1">
-                        <div className="flex justify-between text-[10px] font-bold text-gray-400">
-                            <span>Subtotal</span>
-                            <span>₹{subtotal.toLocaleString()}</span>
+                      <div className="flex justify-between text-[10px] font-bold text-gray-400">
+                        <span>Subtotal</span>
+                        <span>₹{subtotal.toLocaleString()}</span>
+                      </div>
+                      {bill.discount && bill.discount > 0 ? (
+                        <div className="flex justify-between text-[10px] font-bold text-red-500">
+                          <span className="flex items-center gap-1"><Tag className="w-2.5 h-2.5" /> Discount</span>
+                          <span>- ₹{bill.discount.toLocaleString()}</span>
                         </div>
-                        {bill.discount && bill.discount > 0 ? (
-                            <div className="flex justify-between text-[10px] font-bold text-red-500">
-                                <span className="flex items-center gap-1"><Tag className="w-2.5 h-2.5" /> Discount</span>
-                                <span>- ₹{bill.discount.toLocaleString()}</span>
-                            </div>
-                        ) : null}
-                        <div className="flex justify-between text-[11px] font-black text-indigo-600 pt-0.5">
-                            <span>Total Amount</span>
-                            <span>₹{bill.amount.toLocaleString()}</span>
-                        </div>
+                      ) : null}
+                      <div className="flex justify-between text-[11px] font-black text-indigo-600 pt-0.5">
+                        <span>Total Amount</span>
+                        <span>₹{bill.amount.toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -260,25 +275,25 @@ export default function BillingHistory() {
               </div>
               <button onClick={() => setEditingBill(null)} className="p-1.5 bg-gray-100 rounded-full"><X className="w-4 h-4 text-gray-400" /></button>
             </div>
-            
+
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-indigo-500 uppercase ml-1 flex items-center gap-1">
                 <Smartphone className="w-3 h-3" /> New Phone Number
               </label>
-              <input 
-                type="tel" 
-                value={newPhone} 
-                onChange={e => setNewPhone(e.target.value)} 
-                className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-4 py-3 text-lg font-black outline-none focus:border-indigo-600 focus:bg-white transition-all" 
+              <input
+                type="tel"
+                value={newPhone}
+                onChange={e => setNewPhone(e.target.value)}
+                className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-4 py-3 text-lg font-black outline-none focus:border-indigo-600 focus:bg-white transition-all"
                 placeholder="00000 00000"
                 maxLength={10}
                 autoFocus
               />
             </div>
 
-            <button 
-              onClick={handleUpdateAndResend} 
-              disabled={isResending || newPhone.length < 10} 
+            <button
+              onClick={handleUpdateAndResend}
+              disabled={isResending || newPhone.length < 10}
               className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black text-sm mt-6 flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
             >
               {isResending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /> UPDATE & RESEND BILL</>}

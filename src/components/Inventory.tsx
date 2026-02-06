@@ -705,55 +705,51 @@ const Inventory: FC = () => {
                     <h1 className="text-xl md:text-3xl font-bold text-gray-900">Inventory</h1>
                     <p className="hidden md:block text-sm text-gray-600">Search, upload, or manage products manually.</p>
                 </div>
-                <div className="relative w-full md:w-auto order-first md:order-none">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-[#5a4fcf] focus:border-[#5a4fcf] outline-none transition-all" />
-                </div>
+
                 <div className="hidden sm:flex items-center gap-3">
                     <label className="flex items-center cursor-pointer bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm"><Upload className="w-4 h-4 mr-2" /> Upload Excel<input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" /></label>
                     <button onClick={() => setModalState({ isOpen: true, product: null })} className="flex items-center gap-1 bg-[#5a4fcf] hover:bg-[#4a3fb5] text-white px-4 py-2 rounded-md text-sm"><Plus className="w-4 h-4" /> Add Product</button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-3 mb-6">
                 <button
                     onClick={() => setActiveFilter('all')}
-                    className={`${activeFilter === 'all' ? 'ring-2 ring-[#5a4fcf] bg-indigo-100' : 'bg-indigo-50'} border border-indigo-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
+                    className={`${activeFilter === 'all' ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-200' : 'bg-indigo-50 border-indigo-200'} border-2 rounded-xl p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95`}
                 >
-                    <div className="p-1.5 sm:p-3 bg-[#5a4fcf] rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
-                        <Package className="w-4 h-4 sm:w-6 sm:h-6" />
+                    <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mb-1">
+                        <Package className="w-4 h-4 text-white" />
                     </div>
-                    <div className="text-center sm:text-left">
-                        <p className="text-[10px] sm:text-xs font-semibold text-indigo-600 uppercase tracking-tight sm:tracking-wider">All Stock</p>
-                        <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.totalProducts}</p>
-                    </div>
+                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">All Stock</p>
+                    <p className="text-lg font-extrabold text-gray-900">{stats.totalProducts}</p>
                 </button>
 
                 <button
                     onClick={() => setActiveFilter('low')}
-                    className={`${activeFilter === 'low' ? 'ring-2 ring-orange-500 bg-orange-100' : 'bg-orange-50'} border border-orange-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
+                    className={`${activeFilter === 'low' ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-200' : 'bg-orange-50 border-orange-200'} border-2 rounded-xl p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95`}
                 >
-                    <div className="p-1.5 sm:p-3 bg-orange-500 rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
-                        <AlertTriangle className="w-4 h-4 sm:w-6 sm:h-6" />
+                    <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mb-1">
+                        <AlertTriangle className="w-4 h-4 text-white" />
                     </div>
-                    <div className="text-center sm:text-left">
-                        <p className="text-[10px] sm:text-xs font-semibold text-orange-600 uppercase tracking-tight sm:tracking-wider">Low Stock</p>
-                        <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.lowStock}</p>
-                    </div>
+                    <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wide">Low Stock</p>
+                    <p className="text-lg font-extrabold text-gray-900">{stats.lowStock}</p>
                 </button>
 
                 <button
                     onClick={() => setActiveFilter('out')}
-                    className={`${activeFilter === 'out' ? 'ring-2 ring-red-500 bg-red-100' : 'bg-red-50'} border border-red-100 rounded-xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:gap-4 shadow-sm transition-all active:scale-95`}
+                    className={`${activeFilter === 'out' ? 'bg-red-50 border-red-300 ring-2 ring-red-200' : 'bg-red-50 border-red-200'} border-2 rounded-xl p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95`}
                 >
-                    <div className="p-1.5 sm:p-3 bg-red-500 rounded-lg sm:rounded-xl text-white mb-1 sm:mb-0">
-                        <AlertCircle className="w-4 h-4 sm:w-6 sm:h-6" />
+                    <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center mb-1">
+                        <AlertCircle className="w-4 h-4 text-white" />
                     </div>
-                    <div className="text-center sm:text-left">
-                        <p className="text-[10px] sm:text-xs font-semibold text-red-600 uppercase tracking-tight sm:tracking-wider">Out Stock</p>
-                        <p className="text-sm sm:text-2xl font-bold text-gray-900">{stats.outOfStock}</p>
-                    </div>
+                    <p className="text-[10px] font-bold text-red-500 uppercase tracking-wide">Out Stock</p>
+                    <p className="text-lg font-extrabold text-gray-900">{stats.outOfStock}</p>
                 </button>
+            </div>
+
+            <div className="relative w-full mb-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-[#5a4fcf] focus:border-[#5a4fcf] outline-none transition-all" />
             </div>
 
             {renderContent()}

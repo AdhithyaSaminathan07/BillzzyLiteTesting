@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { ArrowRight, Leaf } from "lucide-react";
 import { Poppins } from "next/font/google";
 
@@ -75,9 +76,11 @@ export default function GoPaperlessSection() {
           {/* Blob behind image on desktop */}
           <div className="hidden md:block absolute inset-0 bg-[#5a4fcf]/5 rounded-full blur-3xl transform scale-90 translate-x-10"></div>
 
-          <img
+          <Image
             src="/images/paper-lesss.png"
             alt="Go Paperless"
+            width={350}
+            height={350}
             className="relative z-10 w-full max-w-[350px] md:max-w-none md:w-[90%] h-auto object-contain drop-shadow-xl md:drop-shadow-2xl animate-float md:animate-none"
           />
         </div>

@@ -21,6 +21,8 @@ export async function GET() {
             return NextResponse.json({ message: 'User not found' }, { status: 404 });
         }
 
+        console.log("GET /api/users/settings - Found User:", JSON.stringify(user, null, 2));
+
         return NextResponse.json(user);
     } catch (error) {
         console.error('API Error:', error);
@@ -39,6 +41,7 @@ export async function PUT(request: Request) {
         await dbConnect();
 
         const body = await request.json();
+        console.log("PUT /api/users/settings - Body:", JSON.stringify(body, null, 2));
 
         // Whitelist allowed fields to update
         const { name, phoneNumber, address, shopName, shopAddress, merchantUpiId } = body;
@@ -56,6 +59,8 @@ export async function PUT(request: Request) {
             },
             { new: true }
         ).select('name email phoneNumber address shopName shopAddress merchantUpiId');
+
+        console.log("PUT /api/users/settings - Updated User:", JSON.stringify(updatedUser, null, 2));
 
         if (!updatedUser) {
             return NextResponse.json({ message: 'User not found' }, { status: 404 });

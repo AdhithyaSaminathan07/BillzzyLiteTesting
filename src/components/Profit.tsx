@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Calendar, Loader2, AlertCircle } from 'lucide-react';
+import { TrendingUp, Loader2, AlertCircle } from 'lucide-react';
 
 export default function ProfitSection() {
   const [activeTab, setActiveTab] = useState('daily');

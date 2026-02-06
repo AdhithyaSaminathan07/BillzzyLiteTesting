@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import CRMComponent from '@/components/CRM';
 import ProfitSection from '@/components/Profit';
+import SalesSummary from '@/components/SalesSummary';
 import { ChevronDown, ChevronUp, BarChart3, TrendingUp, Lock, ArrowRight } from 'lucide-react';
 
 export default function ReportPage() {
@@ -18,6 +19,7 @@ export default function ReportPage() {
   // --- REPORT UI STATE ---
   const [showCRM, setShowCRM] = useState<boolean>(false);
   const [showProfit, setShowProfit] = useState<boolean>(false);
+  const [showSales, setShowSales] = useState<boolean>(false);
 
 
   // Fix for Hydration Error: Only render content after component mounts
@@ -45,7 +47,7 @@ export default function ReportPage() {
         setError(data.message || 'Incorrect PIN');
         setPinInput('');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to verify PIN. Please try again.');
     } finally {
       setIsChecking(false);
@@ -119,6 +121,41 @@ export default function ReportPage() {
 
         {/* Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+          {/* SALES SECTION */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden lg:col-span-2">
+            <button
+              onClick={() => setShowSales(!showSales)}
+              className="flex items-center justify-between w-full px-6 py-5 text-white transition-all duration-300 group"
+              style={{ backgroundColor: '#5a4fcf' }}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = '#4a3fbf'}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = '#5a4fcf'}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-all">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="font-semibold text-lg block">Sales Overview</span>
+                  <span className="text-xs opacity-90">Daily, Weekly, Monthly Analysis</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm opacity-90 hidden sm:block">
+                  {showSales ? 'Hide' : 'Show'} Details
+                </span>
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-all">
+                  {showSales ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+              </div>
+            </button>
+
+            {showSales && (
+              <div className="p-6 bg-gray-50 border-t border-gray-100">
+                <SalesSummary enableTabs={true} />
+              </div>
+            )}
+          </div>
 
           {/* LEFT SIDE: Profit Section */}
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
