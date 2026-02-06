@@ -212,7 +212,7 @@ export default function Dashboard() {
         </div>
 
         {/* 2. INSERT THE GRAPH HERE */}
-        {/* <StockStyleSalesChart /> */}
+         <StockStyleSalesChart /> 
 
         {/* Inventory Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3.5">
