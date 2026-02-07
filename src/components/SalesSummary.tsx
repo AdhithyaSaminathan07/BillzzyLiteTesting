@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { TrendingUp, Wallet, CreditCard, Loader2, AlertTriangle } from "lucide-react";
+import { TrendingUp, Wallet, CreditCard, Loader2, AlertTriangle, Calendar as CalendarIcon, X, ChevronDown } from "lucide-react";
 import { motion, LayoutGroup } from "framer-motion";
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 
 // --- TYPE DEFINITIONS ---
+type ValuePiece = Date | null;
+type Value = ValuePiece | [ValuePiece, ValuePiece];
+
 type SalesData = {
     total: number;
     cash: number;
@@ -14,13 +19,15 @@ type SalesData = {
     lastUpdated: string;
 };
 
-type Period = "Today" | "Weekly" | "Monthly";
+type Period = "Today" | "Weekly" | "Monthly" | "Custom";
 
 interface SalesSummaryProps {
     enableTabs?: boolean;
+    showHeader?: boolean;
 }
 
-export default function SalesSummary({ enableTabs = true }: SalesSummaryProps) {
+export default function SalesSummary({ enableTabs = true, showHeader = true }: SalesSummaryProps) {
+
     const { status } = useSession();
 
     // State for Sales Data
@@ -30,6 +37,11 @@ export default function SalesSummary({ enableTabs = true }: SalesSummaryProps) {
     const [activePeriod, setActivePeriod] = useState<Period>("Today");
     const [isSalesLoading, setIsSalesLoading] = useState(true);
     const [salesError, setSalesError] = useState<string | null>(null);
+
+    // Date Range State
+    const [dateRange, setDateRange] = useState<Value>(null);
+    const [tempDateRange, setTempDateRange] = useState<Value>(null);
+    const [showCalendar, setShowCalendar] = useState(false);
 
     useEffect(() => {
         if (status !== 'authenticated') {
@@ -41,7 +53,21 @@ export default function SalesSummary({ enableTabs = true }: SalesSummaryProps) {
             setIsSalesLoading(true);
             setSalesError(null);
             try {
-                const res = await fetch(`/api/sales?period=${activePeriod.toLowerCase()}`);
+                const queryParams = new URLSearchParams();
+                queryParams.append('period', activePeriod.toLowerCase());
+
+                if (activePeriod === 'Custom') {
+                    if (Array.isArray(dateRange) && dateRange[0] && dateRange[1]) {
+                        queryParams.append('startDate', dateRange[0].toISOString());
+                        queryParams.append('endDate', dateRange[1].toISOString());
+                    } else {
+                        // Don't fetch if custom range is incomplete
+                        setIsSalesLoading(false);
+                        return;
+                    }
+                }
+
+                const res = await fetch(`/api/sales?${queryParams.toString()}`);
                 if (!res.ok) throw new Error("Failed to fetch sales data");
                 const data: SalesData = await res.json();
                 setSalesData(data);
@@ -54,48 +80,165 @@ export default function SalesSummary({ enableTabs = true }: SalesSummaryProps) {
         };
 
         fetchSales();
-    }, [activePeriod, status]);
+    }, [activePeriod, dateRange, status]);
 
-    const TABS: Period[] = ["Today", "Weekly", "Monthly"];
+    const TABS: Period[] = ["Today", "Weekly", "Monthly", "Custom"];
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3.5">
-            <div className="flex items-center justify-between mb-2.5">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-[#5a4fcf] rounded-lg flex items-center justify-center">
-                        <TrendingUp className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-bold text-gray-900">Sales</h3>
-                        <p className="text-xs text-gray-500">
-                            {activePeriod === 'Today' ? "Today" : `This ${activePeriod.slice(0, -2)}`}
-                        </p>
+            {showHeader && (
+                <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-[#5a4fcf] rounded-lg flex items-center justify-center">
+                            <TrendingUp className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-900">Sales</h3>
+                            <p className="text-xs text-gray-500">
+                                {activePeriod === 'Today' ? "Today" : `This ${activePeriod.slice(0, -2)}`}
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Period Tabs - Only show if enableTabs is true */}
             {enableTabs && (
-                <div className="flex gap-1 mb-2.5 bg-gray-100 p-0.5 rounded-lg">
-                    <LayoutGroup>
-                        {TABS.map((tab) => (
+                <div className="mb-4">
+                    <div className="flex gap-1 mb-2.5 bg-gray-100 p-0.5 rounded-lg">
+                        <LayoutGroup>
+                            {TABS.map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActivePeriod(tab)}
+                                    className={`relative flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors z-10 ${activePeriod === tab ? "text-white" : "text-gray-600 hover:text-gray-800"
+                                        }`}
+                                >
+                                    {activePeriod === tab && (
+                                        <motion.div
+                                            layoutId="activeTab-summary"
+                                            className="absolute inset-0 bg-[#5a4fcf] rounded-md -z-10 shadow-sm"
+                                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                        />
+                                    )}
+                                    {tab}
+                                </button>
+                            ))}
+                        </LayoutGroup>
+                    </div>
+
+                    {/* Custom Date Picker - Only show when Custom tab is active */}
+                    {activePeriod === 'Custom' && (
+                        <div className="relative z-50">
                             <button
-                                key={tab}
-                                onClick={() => setActivePeriod(tab)}
-                                className={`relative flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors z-10 ${activePeriod === tab ? "text-white" : "text-gray-600 hover:text-gray-800"
-                                    }`}
+                                onClick={() => {
+                                    setTempDateRange(dateRange);
+                                    setShowCalendar(!showCalendar);
+                                }}
+                                className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:border-[#5a4fcf] transition-colors"
                             >
-                                {activePeriod === tab && (
-                                    <motion.div
-                                        layoutId="activeTab-summary"
-                                        className="absolute inset-0 bg-[#5a4fcf] rounded-md -z-10 shadow-sm"
-                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                    />
-                                )}
-                                {tab}
+                                <div className="flex items-center gap-2">
+                                    <CalendarIcon className="w-4 h-4 text-gray-400" />
+                                    <span>
+                                        {Array.isArray(dateRange) && dateRange[0] && dateRange[1]
+                                            ? `${dateRange[0].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - ${dateRange[1].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+                                            : 'Select Date Range'}
+                                    </span>
+                                </div>
+                                {showCalendar ? <X className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                             </button>
-                        ))}
-                    </LayoutGroup>
+
+                            {/* Floating Calendar Popover */}
+                            {showCalendar && (
+                                <div className="absolute top-12 left-0 z-[60] bg-white rounded-xl shadow-xl border border-gray-100 p-0 w-full sm:w-[280px] animate-in fade-in zoom-in-95 duration-200">
+                                    <style jsx global>{`
+                                        .sales-calendar .react-calendar {
+                                            border: none;
+                                            font-family: inherit;
+                                            width: 100%;
+                                            font-size: 0.75rem;
+                                            background: transparent;
+                                        }
+                                        .sales-calendar .react-calendar__navigation {
+                                            margin-bottom: 0.5rem;
+                                        }
+                                        .sales-calendar .react-calendar__navigation button {
+                                            min-width: 24px;
+                                            background: none;
+                                            font-weight: 600;
+                                        }
+                                        .sales-calendar .react-calendar__month-view__weekdays {
+                                            font-weight: 500;
+                                            font-size: 0.65rem;
+                                            text-transform: uppercase;
+                                            color: #9ca3af;
+                                        }
+                                        .sales-calendar .react-calendar__tile {
+                                            padding: 8px 4px;
+                                        }
+                                        .sales-calendar .react-calendar__tile--active {
+                                            background: #5a4fcf !important;
+                                            color: white !important;
+                                            border-radius: 6px;
+                                        }
+                                        .sales-calendar .react-calendar__tile--now {
+                                            background: #f3f4f6;
+                                            border-radius: 6px;
+                                            color: #1f2937;
+                                        }
+                                        .sales-calendar .react-calendar__tile--range {
+                                            background: #eef2ff;
+                                            color: #5a4fcf;
+                                            border-radius: 0;
+                                        }
+                                        .sales-calendar .react-calendar__tile--rangeStart {
+                                            background: #5a4fcf !important;
+                                            color: white !important;
+                                            border-top-left-radius: 6px !important;
+                                            border-bottom-left-radius: 6px !important;
+                                        }
+                                        .sales-calendar .react-calendar__tile--rangeEnd {
+                                            background: #5a4fcf !important;
+                                            color: white !important;
+                                            border-top-right-radius: 6px !important;
+                                            border-bottom-right-radius: 6px !important;
+                                        }
+                                    `}</style>
+
+                                    <div className="p-3 sales-calendar">
+                                        <Calendar
+                                            onChange={(value) => setTempDateRange(value)}
+                                            value={tempDateRange}
+                                            selectRange={true}
+                                            prevLabel={<ChevronDown className="w-4 h-4 rotate-90" />}
+                                            nextLabel={<ChevronDown className="w-4 h-4 -rotate-90" />}
+                                            className="w-full"
+                                        />
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2 p-3 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+                                        <button
+                                            onClick={() => setShowCalendar(false)}
+                                            className="flex-1 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setDateRange(tempDateRange);
+                                                setShowCalendar(false);
+                                            }}
+                                            disabled={!Array.isArray(tempDateRange) || !tempDateRange[0] || !tempDateRange[1]}
+                                            className="flex-1 py-2 text-xs font-medium text-white bg-[#5a4fcf] rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                        >
+                                            Apply
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 

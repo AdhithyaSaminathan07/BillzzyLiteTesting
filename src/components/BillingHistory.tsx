@@ -3,8 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import {
   Filter, X, IndianRupee,
-  Smartphone, Pencil, Send, Loader2, Tag
+  Smartphone, Pencil, Send, Loader2, Tag, Calendar as CalendarIcon
 } from 'lucide-react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+import { format, parseISO } from 'date-fns';
 import { motion, LayoutGroup } from "framer-motion";
 
 interface BillItem {
@@ -31,9 +34,14 @@ type TimeFilter = 'today' | 'weekly' | 'monthly' | 'custom';
 export default function BillingHistory() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [activeTab, setActiveTab] = useState<TimeFilter>('today');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+
+  // New Date Filter State
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  type ValuePiece = Date | null;
+  type CalendarValue = ValuePiece | [ValuePiece, ValuePiece];
+  const [dateRange, setDateRange] = useState<CalendarValue>(null);
+  const [tempDateRange, setTempDateRange] = useState<CalendarValue>(null);
+
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
   const [newPhone, setNewPhone] = useState('');
@@ -43,8 +51,6 @@ export default function BillingHistory() {
 
   useEffect(() => {
     const today = getToday();
-    setFromDate(today);
-    setToDate(today);
     fetchHistory(today, today, 'today');
   }, []);
 
@@ -68,12 +74,15 @@ export default function BillingHistory() {
     if (type === 'today') {
       const dateStr = getToday();
       fetchHistory(dateStr, dateStr, 'today');
+      setDateRange(null); // Clear custom range
     } else if (type === 'weekly') {
       start.setDate(today.getDate() - 7);
       fetchHistory(start.toISOString().split('T')[0], getToday(), 'weekly');
+      setDateRange(null);
     } else if (type === 'monthly') {
       start.setMonth(today.getMonth() - 1);
       fetchHistory(start.toISOString().split('T')[0], getToday(), 'monthly');
+      setDateRange(null);
     }
   };
 
@@ -88,7 +97,7 @@ export default function BillingHistory() {
       });
       if (res.ok) {
         setEditingBill(null);
-        handleQuickFilter(activeTab);
+        handleQuickFilter(activeTab); // Refresh current view
       }
     } finally {
       setIsResending(false);
@@ -127,13 +136,134 @@ export default function BillingHistory() {
               <p className="text-xs text-gray-500">Transaction log</p>
             </div>
           </div>
-          <button onClick={() => setShowFilters(!showFilters)} className="p-2 text-indigo-600 bg-indigo-50 rounded-lg">
-            {showFilters ? <X className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
-          </button>
+
+          <div className="relative">
+            <button
+              onClick={() => {
+                setTempDateRange(dateRange);
+                setShowDateFilter(!showDateFilter);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all shadow-sm border ${Array.isArray(dateRange) && dateRange[0] && dateRange[1]
+                ? 'bg-[#4a3fb8] text-white border-transparent ring-2 ring-purple-200'
+                : 'bg-[#5a4fcf] text-white border-transparent hover:bg-[#4a3fb8]'
+                }`}
+            >
+              <Filter className="w-4 h-4" />
+              {Array.isArray(dateRange) && dateRange[0] && dateRange[1] ? (
+                <span className="text-xs">
+                  {format(dateRange[0], 'dd MMM')} - {format(dateRange[1], 'dd MMM')}
+                </span>
+              ) : null}
+              {(Array.isArray(dateRange) && dateRange[0]) && (
+                <X
+                  size={14}
+                  className="ml-1 hover:text-red-500"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDateRange(null);
+                    // Reset to Today when cleared
+                    const today = getToday();
+                    fetchHistory(today, today, 'today');
+                  }}
+                />
+              )}
+            </button>
+
+            {/* Date Filter Popover */}
+            {showDateFilter && (
+              <div className="absolute top-full right-0 mt-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-[280px] p-0 animate-in fade-in zoom-in-95 duration-200">
+                <style>{`
+                    .filter-calendar .react-calendar {
+                      border: none;
+                      font-family: inherit;
+                      width: 100%;
+                      font-size: 0.75rem;
+                      background: transparent;
+                    }
+                    .filter-calendar .react-calendar__navigation {
+                      margin-bottom: 0.5rem;
+                    }
+                    .filter-calendar .react-calendar__navigation button {
+                      min-width: 24px;
+                      background: none;
+                      font-weight: 600;
+                      color: #5a4fcf;
+                    }
+                    .filter-calendar .react-calendar__month-view__weekdays {
+                      font-weight: 600;
+                      font-size: 0.65rem;
+                      text-transform: uppercase;
+                      color: #9ca3af;
+                    }
+                    .filter-calendar .react-calendar__tile {
+                      padding: 6px 4px;
+                      border-radius: 4px;
+                    }
+                    .filter-calendar .react-calendar__tile--active {
+                      background: #5a4fcf !important;
+                      color: white !important;
+                    }
+                    .filter-calendar .react-calendar__tile--now {
+                      background: #f3f4f6;
+                    }
+                    .filter-calendar .react-calendar__tile--range {
+                       background: #eef2ff;
+                       color: #5a4fcf;
+                    }
+                    .filter-calendar .react-calendar__tile--rangeStart {
+                       background: #5a4fcf !important;
+                       color: white !important;
+                       border-top-left-radius: 6px !important;
+                       border-bottom-left-radius: 6px !important;
+                    }
+                    .filter-calendar .react-calendar__tile--rangeEnd {
+                       background: #5a4fcf !important;
+                       color: white !important;
+                       border-top-right-radius: 6px !important;
+                       border-bottom-right-radius: 6px !important;
+                    }
+                 `}</style>
+                <div className="p-3 filter-calendar">
+                  <Calendar
+                    onChange={(value) => setTempDateRange(value as CalendarValue)}
+                    value={tempDateRange}
+                    selectRange={true}
+                    className="w-full"
+                    next2Label={null}
+                    prev2Label={null}
+                  />
+                </div>
+                <div className="flex items-center gap-2 p-2 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+                  <button
+                    onClick={() => setShowDateFilter(false)}
+                    className="flex-1 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (Array.isArray(tempDateRange) && tempDateRange[0] && tempDateRange[1]) {
+                        setDateRange(tempDateRange);
+                        setShowDateFilter(false);
+
+                        const f = format(tempDateRange[0], 'yyyy-MM-dd');
+                        const t = format(tempDateRange[1], 'yyyy-MM-dd');
+                        fetchHistory(f, t, 'custom');
+                      }
+                    }}
+                    disabled={!Array.isArray(tempDateRange) || !tempDateRange[0] || !tempDateRange[1]}
+                    className="flex-1 py-1.5 text-xs font-medium text-white bg-[#5a4fcf] rounded hover:bg-[#4a3fb8] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Quick Filter Boxes */}
-        <div className="px-3 pb-2">
+        <div className="px-3 pb-2 pt-2">
           <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
             <LayoutGroup>
               {['today', 'weekly', 'monthly'].map((id) => (
@@ -146,7 +276,7 @@ export default function BillingHistory() {
                   {activeTab === id && (
                     <motion.div
                       layoutId="activeTab-history"
-                      className="absolute inset-0 bg-indigo-600 rounded-md -z-10 shadow-sm"
+                      className="absolute inset-0 bg-[#5a4fcf] rounded-md -z-10 shadow-sm"
                       transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     />
                   )}
@@ -156,16 +286,6 @@ export default function BillingHistory() {
             </LayoutGroup>
           </div>
         </div>
-
-        {showFilters && (
-          <div className="px-3 pb-3 bg-gray-50 border-t border-gray-100 py-2">
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="border rounded-lg px-2 py-1.5 text-xs outline-none w-full" />
-              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="border rounded-lg px-2 py-1.5 text-xs outline-none w-full" />
-            </div>
-            <button onClick={() => fetchHistory(fromDate, toDate, 'custom')} className="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs">Apply Range</button>
-          </div>
-        )}
 
         <div className="px-3 py-1 bg-indigo-50/30 flex justify-between items-center text-[10px] font-bold">
           <span className="text-gray-400 uppercase">{bills.length} BILLS</span>

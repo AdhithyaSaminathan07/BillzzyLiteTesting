@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Download, Calendar as CalendarIcon, Store, DollarSign, Edit2, X, Trash2, Package, ShoppingCart, AlertCircle, FileText, FileSpreadsheet } from 'lucide-react';
+import { Plus, Download, Calendar as CalendarIcon, Store, DollarSign, Edit2, X, Trash2, Package, ShoppingCart, AlertCircle, FileText, FileSpreadsheet, Filter, Check, IndianRupee } from 'lucide-react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { format, parseISO } from 'date-fns';
@@ -37,6 +37,12 @@ export default function Purchase() {
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'pending'>('pending');
   const [activeFilter, setActiveFilter] = useState<'all' | 'paid' | 'pending'>('all');
   const [showCalendar, setShowCalendar] = useState(false);
+
+  // Date Filter State
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [dateRange, setDateRange] = useState<CalendarValue>(null);
+  const [tempDateRange, setTempDateRange] = useState<CalendarValue>(null);
+
   const [downloadMenuId, setDownloadMenuId] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
@@ -271,10 +277,27 @@ export default function Purchase() {
   const totalPending = purchases.filter(p => p.paymentStatus === 'pending').reduce((sum, p) => sum + p.totalAmount, 0);
 
   const filteredPurchases = useMemo(() => {
-    if (activeFilter === 'paid') return purchases.filter(p => p.paymentStatus === 'paid');
-    if (activeFilter === 'pending') return purchases.filter(p => p.paymentStatus === 'pending');
-    return purchases;
-  }, [purchases, activeFilter]);
+    let result = purchases;
+
+    // 1. Filter by Status
+    if (activeFilter === 'paid') result = result.filter(p => p.paymentStatus === 'paid');
+    else if (activeFilter === 'pending') result = result.filter(p => p.paymentStatus === 'pending');
+
+    // 2. Filter by Date Range
+    if (Array.isArray(dateRange) && dateRange[0] && dateRange[1]) {
+      const start = new Date(dateRange[0]);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(dateRange[1]);
+      end.setHours(23, 59, 59, 999);
+
+      result = result.filter(p => {
+        const pDate = parseISO(p.date);
+        return pDate >= start && pDate <= end;
+      });
+    }
+
+    return result;
+  }, [purchases, activeFilter, dateRange]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-2 sm:p-4 overflow-x-hidden w-full">
@@ -292,13 +315,132 @@ export default function Purchase() {
                 <p className="text-xs text-gray-500">Manage bills</p>
               </div>
             </div>
-            <button
-              onClick={() => (showForm ? resetForm() : setShowForm(true))}
-              className="flex items-center gap-1 bg-[#5a4fcf] text-white px-3 py-1.5 rounded-md hover:bg-[#4a3fb8] transition-all text-sm font-medium shadow-sm"
-            >
-              {showForm ? <X size={16} /> : <Plus size={16} />}
-              {showForm ? 'Close' : 'Add'}
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Date Filter Button */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setTempDateRange(dateRange);
+                    setShowDateFilter(!showDateFilter);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all shadow-sm border ${Array.isArray(dateRange) && dateRange[0] && dateRange[1]
+                    ? 'bg-[#4a3fb8] text-white border-transparent ring-2 ring-purple-200'
+                    : 'bg-[#5a4fcf] text-white border-transparent hover:bg-[#4a3fb8]'
+                    }`}
+                  title="Filter by Date"
+                >
+                  <Filter size={16} />
+                  {Array.isArray(dateRange) && dateRange[0] && dateRange[1] ? (
+                    <span className="text-xs">
+                      {format(dateRange[0], 'dd MMM')} - {format(dateRange[1], 'dd MMM')}
+                    </span>
+                  ) : null}
+                  {(Array.isArray(dateRange) && dateRange[0]) && (
+                    <X
+                      size={14}
+                      className="ml-1 hover:text-red-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDateRange(null);
+                      }}
+                    />
+                  )}
+                </button>
+
+                {/* Date Filter Popover */}
+                {showDateFilter && (
+                  <div className="absolute top-full right-0 mt-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-[280px] p-0 animate-in fade-in zoom-in-95 duration-200">
+                    <style>{`
+                        .filter-calendar .react-calendar {
+                          border: none;
+                          font-family: inherit;
+                          width: 100%;
+                          font-size: 0.75rem;
+                          background: transparent;
+                        }
+                        .filter-calendar .react-calendar__navigation {
+                          margin-bottom: 0.5rem;
+                        }
+                        .filter-calendar .react-calendar__navigation button {
+                          min-width: 24px;
+                          background: none;
+                          font-weight: 600;
+                          color: #5a4fcf;
+                        }
+                        .filter-calendar .react-calendar__month-view__weekdays {
+                          font-weight: 600;
+                          font-size: 0.65rem;
+                          text-transform: uppercase;
+                          color: #9ca3af;
+                        }
+                        .filter-calendar .react-calendar__tile {
+                          padding: 6px 4px;
+                          border-radius: 4px;
+                        }
+                        .filter-calendar .react-calendar__tile--active {
+                          background: #5a4fcf !important;
+                          color: white !important;
+                        }
+                        .filter-calendar .react-calendar__tile--now {
+                          background: #f3f4f6;
+                        }
+                        .filter-calendar .react-calendar__tile--range {
+                           background: #eef2ff;
+                           color: #5a4fcf;
+                        }
+                        .filter-calendar .react-calendar__tile--rangeStart {
+                           background: #5a4fcf !important;
+                           color: white !important;
+                           border-top-left-radius: 6px !important;
+                           border-bottom-left-radius: 6px !important;
+                        }
+                        .filter-calendar .react-calendar__tile--rangeEnd {
+                           background: #5a4fcf !important;
+                           color: white !important;
+                           border-top-right-radius: 6px !important;
+                           border-bottom-right-radius: 6px !important;
+                        }
+                     `}</style>
+                    <div className="p-3 filter-calendar">
+                      <Calendar
+                        onChange={(value) => setTempDateRange(value as CalendarValue)}
+                        value={tempDateRange}
+                        selectRange={true}
+                        className="w-full"
+                        next2Label={null}
+                        prev2Label={null}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 p-2 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+                      <button
+                        onClick={() => setShowDateFilter(false)}
+                        className="flex-1 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDateRange(tempDateRange);
+                          setShowDateFilter(false);
+                        }}
+                        disabled={!Array.isArray(tempDateRange) || !tempDateRange[0] || !tempDateRange[1]}
+                        className="flex-1 py-1.5 text-xs font-medium text-white bg-[#5a4fcf] rounded hover:bg-[#4a3fb8] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => (showForm ? resetForm() : setShowForm(true))}
+                className="flex items-center gap-1 bg-[#5a4fcf] text-white px-3 py-1.5 rounded-md hover:bg-[#4a3fb8] transition-all text-sm font-medium shadow-sm"
+              >
+                {showForm ? <X size={16} /> : <Plus size={16} />}
+                {showForm ? 'Close' : 'Add'}
+              </button>
+            </div>
           </div>
 
           {/* Stats Bar */}
@@ -319,7 +461,7 @@ export default function Purchase() {
               className={`${activeFilter === 'paid' ? 'bg-green-50 border-green-300 ring-2 ring-green-200' : 'bg-green-50 border-green-200'} border-2 rounded-xl p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95`}
             >
               <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mb-1">
-                <DollarSign className="w-4 h-4 text-white" />
+                <IndianRupee className="w-4 h-4 text-white" />
               </div>
               <p className="text-[10px] font-bold text-green-500 uppercase tracking-wide">Paid</p>
               <p className="text-lg font-extrabold text-gray-900">₹{totalPaid.toFixed(0)}</p>

@@ -421,6 +421,7 @@ export default function BillingPage() {
     setShowWhatsAppSharePanel(false);
     setShowPaymentOptions(false);
     setWhatsAppNumber('');
+    setCustomerName('');
     setAmountGiven('');
     setDiscountInput('');
     setModal({ ...modal, isOpen: false });
