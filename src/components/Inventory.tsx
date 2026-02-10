@@ -699,69 +699,110 @@ const Inventory: FC = () => {
     }
 
     return (
-        <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 font-sans">
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4">
-                <div>
-                    <h1 className="text-xl md:text-3xl font-bold text-gray-900">Inventory</h1>
-                    <p className="hidden md:block text-sm text-gray-600">Search, upload, or manage products manually.</p>
+        <div className="h-full bg-gray-50 overflow-y-auto p-2.5 pb-20 font-sans">
+            <div className="max-w-2xl mx-auto space-y-4">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3.5 space-y-3.5">
+                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-[#5a4fcf] rounded-lg flex items-center justify-center">
+                                <Package className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 leading-tight">Inventory</h3>
+                                <p className="text-xs text-gray-500">Stock levels</p>
+                            </div>
+                        </div>
+
+                        <div className="hidden sm:flex items-center gap-2">
+                            <label className="flex items-center cursor-pointer bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                                <Upload className="w-3.5 h-3.5 mr-1.5" />
+                                Upload Excel
+                                <input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" />
+                            </label>
+                            <button
+                                onClick={() => setModalState({ isOpen: true, product: null })}
+                                className="flex items-center gap-1 bg-[#5a4fcf] hover:bg-[#4a3fb5] text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                Add Product
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                        {/* All Stock */}
+                        <button
+                            onClick={() => setActiveFilter('all')}
+                            className={`rounded-xl border-2 p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95 ${activeFilter === 'all' ? 'bg-indigo-50 border-indigo-200 ring-2 ring-indigo-100' : 'bg-indigo-50 border-indigo-100/50'
+                                }`}
+                        >
+                            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mb-1">
+                                <Package className="w-4 h-4 text-white" />
+                            </div>
+                            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">All Stock</p>
+                            <p className="text-lg font-extrabold text-gray-900">{stats.totalProducts}</p>
+                        </button>
+
+                        {/* Low Stock */}
+                        <button
+                            onClick={() => setActiveFilter('low')}
+                            className={`rounded-xl border-2 p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95 ${activeFilter === 'low' ? 'bg-orange-50 border-orange-200 ring-2 ring-orange-100' : 'bg-orange-50 border-orange-100/50'
+                                }`}
+                        >
+                            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mb-1">
+                                <AlertTriangle className="w-4 h-4 text-white" />
+                            </div>
+                            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wide">Low Stock</p>
+                            <p className="text-lg font-extrabold text-gray-900">{stats.lowStock}</p>
+                        </button>
+
+                        {/* Out Stock */}
+                        <button
+                            onClick={() => setActiveFilter('out')}
+                            className={`rounded-xl border-2 p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95 ${activeFilter === 'out' ? 'bg-red-50 border-red-200 ring-2 ring-red-100' : 'bg-red-50 border-red-100/50'
+                                }`}
+                        >
+                            <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center mb-1">
+                                <AlertCircle className="w-4 h-4 text-white" />
+                            </div>
+                            <p className="text-[10px] font-bold text-red-500 uppercase tracking-wide">Out Stock</p>
+                            <p className="text-lg font-extrabold text-gray-900">{stats.outOfStock}</p>
+                        </button>
+                    </div>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-3">
-                    <label className="flex items-center cursor-pointer bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm"><Upload className="w-4 h-4 mr-2" /> Upload Excel<input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" /></label>
-                    <button onClick={() => setModalState({ isOpen: true, product: null })} className="flex items-center gap-1 bg-[#5a4fcf] hover:bg-[#4a3fb5] text-white px-4 py-2 rounded-md text-sm"><Plus className="w-4 h-4" /> Add Product</button>
+                <div className="relative w-full group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400 group-focus-within:text-indigo-600 transition-colors" />
+                    <input
+                        type="text"
+                        placeholder="Search products by name or SKU..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 text-sm border-2 border-transparent bg-white rounded-2xl shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-gray-400 font-medium"
+                    />
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    {renderContent()}
+                </div>
+
+                <div className="sm:hidden fixed bottom-24 right-4 flex flex-col items-center gap-3 z-40">
+                    <label className="w-12 h-12 flex items-center justify-center cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg border-2 border-white transition-transform active:scale-95">
+                        <Upload className="w-5 h-5" />
+                        <input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" />
+                    </label>
+                    <button
+                        onClick={() => setModalState({ isOpen: true, product: null })}
+                        className="w-14 h-14 flex items-center justify-center bg-[#5a4fcf] hover:bg-[#4a3fb5] text-white rounded-full shadow-xl border-2 border-white transition-transform active:scale-95"
+                    >
+                        <Plus className="w-6 h-6" />
+                    </button>
                 </div>
             </div>
-
-            <div className="grid grid-cols-3 gap-3 mb-6">
-                <button
-                    onClick={() => setActiveFilter('all')}
-                    className={`${activeFilter === 'all' ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-200' : 'bg-indigo-50 border-indigo-200'} border-2 rounded-xl p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95`}
-                >
-                    <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mb-1">
-                        <Package className="w-4 h-4 text-white" />
-                    </div>
-                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">All Stock</p>
-                    <p className="text-lg font-extrabold text-gray-900">{stats.totalProducts}</p>
-                </button>
-
-                <button
-                    onClick={() => setActiveFilter('low')}
-                    className={`${activeFilter === 'low' ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-200' : 'bg-orange-50 border-orange-200'} border-2 rounded-xl p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95`}
-                >
-                    <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mb-1">
-                        <AlertTriangle className="w-4 h-4 text-white" />
-                    </div>
-                    <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wide">Low Stock</p>
-                    <p className="text-lg font-extrabold text-gray-900">{stats.lowStock}</p>
-                </button>
-
-                <button
-                    onClick={() => setActiveFilter('out')}
-                    className={`${activeFilter === 'out' ? 'bg-red-50 border-red-300 ring-2 ring-red-200' : 'bg-red-50 border-red-200'} border-2 rounded-xl p-2 flex flex-col items-center justify-center text-center h-24 transition-all active:scale-95`}
-                >
-                    <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center mb-1">
-                        <AlertCircle className="w-4 h-4 text-white" />
-                    </div>
-                    <p className="text-[10px] font-bold text-red-500 uppercase tracking-wide">Out Stock</p>
-                    <p className="text-lg font-extrabold text-gray-900">{stats.outOfStock}</p>
-                </button>
-            </div>
-
-            <div className="relative w-full mb-6">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-[#5a4fcf] focus:border-[#5a4fcf] outline-none transition-all" />
-            </div>
-
-            {renderContent()}
-
-            <div className="sm:hidden fixed bottom-20 right-3 flex flex-col items-center gap-2.5 z-40">
-                <label className="w-12 h-12 flex items-center justify-center cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg border-2 border-white"><Upload className="w-5 h-5" /><input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" /></label>
-                <button onClick={() => setModalState({ isOpen: true, product: null })} className="w-12 h-12 flex items-center justify-center bg-[#5a4fcf] hover:bg-[#4a3fb5] text-white rounded-full shadow-lg border-2 border-white"><Plus className="w-5 h-5" /></button>
-            </div>
-
             {modalState.isOpen && <ProductFormModal product={modalState.product} onSave={handleSaveProduct} onClose={() => setModalState({ isOpen: false, product: null })} />}
         </div>
     );
+
 };
 
 export default Inventory;
