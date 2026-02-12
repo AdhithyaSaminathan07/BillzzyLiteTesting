@@ -5,10 +5,18 @@ import dbConnect from "@/lib/mongodb";
 import Purchase from "@/models/purchase";
 
 // ✅ GET all purchases for the tenant
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const tenantId = session?.user?.email;
+    const { validateMerchantRequest } = await import('@/lib/api-validation');
+    const tenant = await validateMerchantRequest(request);
+    let tenantId;
+
+    if (tenant) {
+      tenantId = tenant.ownerEmail || tenant.subdomain;
+    } else {
+      const session = await getServerSession(authOptions);
+      tenantId = session?.user?.email;
+    }
 
     // Protect the route: ensure the user is authenticated
     if (!tenantId) {
@@ -16,9 +24,16 @@ export async function GET() {
     }
 
     await dbConnect();
-    const purchases = await Purchase.find({ tenantId }).sort({ createdAt: -1 });
+    const escapedId = tenantId.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
+    const purchases = await Purchase.find({
+      $or: [
+        { tenantId: tenantId },
+        { tenantId: { $regex: new RegExp(`^${escapedId}$`, 'i') } }
+      ]
+    }).sort({ createdAt: -1 });
     return NextResponse.json(purchases);
-  } catch {
+  } catch (error) {
+    console.error("Failed to fetch purchases:", error);
     return NextResponse.json({ error: "Failed to fetch purchases" }, { status: 500 });
   }
 }

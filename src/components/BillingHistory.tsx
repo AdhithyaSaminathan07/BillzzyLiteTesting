@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { motion, LayoutGroup } from "framer-motion";
 
 interface BillItem {

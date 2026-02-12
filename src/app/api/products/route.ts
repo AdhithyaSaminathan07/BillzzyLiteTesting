@@ -38,26 +38,51 @@ const transformProduct = (product: IProductFromDB) => {
 
 
 // GET all products for a specific tenant
-export async function GET() {
-  // 3. GET THE SESSION using getServerSession with your authOptions
-  const session = await getServerSession(authOptions);
-  const tenantId = session?.user?.email;
-
-  // Protect the route: ensure the user is authenticated
-  if (!tenantId) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function GET(request: NextRequest) {
   try {
+    const { validateMerchantRequest } = await import('@/lib/api-validation');
+    const tenant = await validateMerchantRequest(request);
+    let tenantId;
+
+    if (tenant) {
+      tenantId = tenant.ownerEmail || tenant.subdomain;
+      console.log(`[API/Products] Authenticated via Hook. TenantIdentifier: ${tenantId}`);
+    } else {
+      const session = await getServerSession(authOptions);
+      tenantId = session?.user?.email;
+      if (tenantId) console.log(`[API/Products] Authenticated via Session. UserEmail: ${tenantId}`);
+    }
+
+    // Protect the route: ensure the user is authenticated
+    if (!tenantId) {
+      console.warn("[API/Products] Unauthorized access attempt.");
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
-    const productsFromDb = await Product.find({ tenantId: tenantId })
+    // Use regex for case-insensitive match (robustness)
+    // Fix: Use double backslash for literal backslash in regex string for RegExp constructor
+    const escapedId = tenantId.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
+    console.log(`[API/Products] Searching products for tenantId: "${tenantId}" (Exact) OR Regex: ^${escapedId}$`);
+
+    const productsFromDb = await Product.find({
+      $or: [
+        { tenantId: tenantId },
+        { tenantId: { $regex: new RegExp(`^${escapedId}$`, 'i') } }
+      ]
+    })
       .sort({ createdAt: -1 })
       .lean<IProductFromDB[]>();
 
+    console.log(`[API/Products] Found ${productsFromDb.length} products.`);
     const products = productsFromDb.map(transformProduct);
-    return NextResponse.json(products);
+
+    const response = NextResponse.json(products);
+    response.headers.set('X-Authenticated-Tenant', tenantId);
+    return response;
 
   } catch (error) {
+    console.error("Failed to fetch products:", error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Failed to fetch products', error: errorMessage }, { status: 500 });
   }

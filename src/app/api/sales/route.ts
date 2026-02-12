@@ -12,11 +12,20 @@ import { authOptions } from "@/lib/auth";
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+    let tenantId = session?.user?.email;
 
-    if (!session?.user?.email) {
+    if (!tenantId) {
+      // Check for API Key auth
+      const { validateMerchantRequest } = await import('@/lib/api-validation');
+      const tenant = await validateMerchantRequest(request);
+      if (tenant) {
+        tenantId = tenant.ownerEmail || tenant.subdomain;
+      }
+    }
+
+    if (!tenantId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
-    const tenantId = session.user.email;
 
     await dbConnect();
 
@@ -58,10 +67,22 @@ export async function GET(request: Request) {
       }
     }
 
-    const periodSales = await Sale.find({
-      tenantId: tenantId,
-      createdAt: { $gte: startDate, $lte: endDate },
-    });
+    await dbConnect();
+
+    const escapedId = tenantId.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
+    const query: { $or: { tenantId: string | { $regex: RegExp } }[]; createdAt?: { $gte: Date; $lte: Date } } = {
+      $or: [
+        { tenantId: tenantId },
+        { tenantId: { $regex: new RegExp(`^${escapedId}$`, 'i') } }
+      ]
+    };
+
+    // Only apply date filter if explicitly requested (period, startDate, or endDate)
+    if (period || startParam || endParam) {
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    }
+
+    const periodSales = await Sale.find(query);
 
     const cashSales = periodSales
       .filter((sale) => sale.paymentMethod === "cash")

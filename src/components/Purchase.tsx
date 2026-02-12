@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Download, Calendar as CalendarIcon, Store, DollarSign, Edit2, X, Trash2, Package, ShoppingCart, AlertCircle, FileText, FileSpreadsheet, Filter, Check, IndianRupee } from 'lucide-react';
+import { Plus, Download, Calendar as CalendarIcon, Store, Edit2, X, Trash2, Package, ShoppingCart, AlertCircle, FileText, FileSpreadsheet, Filter, IndianRupee } from 'lucide-react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { format, parseISO } from 'date-fns';

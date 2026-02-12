@@ -83,15 +83,24 @@ import Sale from "@/models/Sales"; // Importing 'Sale' to match your model expor
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 // --- MODIFIED: Ensure endOfDay is imported for accurate date range filtering ---
-import { startOfDay, endOfDay, subDays, subMonths, subYears, startOfYear } from "date-fns";
+import { startOfDay, endOfDay, subDays, subMonths } from "date-fns";
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const { validateMerchantRequest } = await import('@/lib/api-validation');
+    const tenant = await validateMerchantRequest(req);
+    let userEmail;
+
+    if (tenant) {
+      userEmail = tenant.ownerEmail || tenant.subdomain;
+    } else {
+      const session = await getServerSession(authOptions);
+      userEmail = session?.user?.email;
+    }
+
+    if (!userEmail) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userEmail = session.user.email;
 
     await connectToDatabase();
 
@@ -109,7 +118,7 @@ export async function GET(req: Request) {
     if (startDateParam && endDateParam) {
       startDate = startOfDay(new Date(startDateParam));
       endDate = endOfDay(new Date(endDateParam)); // CRUCIAL: Gets all data from the end date until midnight
-    } 
+    }
     // If no custom dates are sent, it falls back to your original logic for "Today", "Weekly", etc.
     else {
       const today = new Date();
@@ -128,16 +137,24 @@ export async function GET(req: Request) {
           break;
         // Add any other presets you might have
         default:
-          startDate = startOfDay(today);
+          startDate = startOfDay(subMonths(today, 1));
           endDate = endOfDay(today);
       }
     }
 
     // This query now works for BOTH presets and custom ranges
-    const query = {
-      tenantId: userEmail,
-      createdAt: { $gte: startDate, $lte: endDate } // Use $lte for an inclusive range
+    const escapedId = userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
+    const query: { $or: { tenantId: string | { $regex: RegExp } }[]; createdAt?: { $gte: Date; $lte: Date } } = {
+      $or: [
+        { tenantId: userEmail },
+        { tenantId: { $regex: new RegExp(`^${escapedId}$`, 'i') } }
+      ]
     };
+
+    // Only apply date filter if range or specific dates are provided
+    if (range || (startDateParam && endDateParam)) {
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    }
 
     const salesData = await Sale.find(query)
       .sort({ createdAt: 1 })

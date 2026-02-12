@@ -9,20 +9,45 @@ import { authOptions } from "@/lib/auth";
 /**
  * GET: Fetches customers for the currently logged-in user.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const { validateMerchantRequest } = await import('@/lib/api-validation');
+    const tenant = await validateMerchantRequest(request);
+    let tenantId;
 
-    if (!session?.user?.email) {
+    if (tenant) {
+      tenantId = tenant.ownerEmail || tenant.subdomain;
+      console.log(`[API/Customers] Authenticated via Hook. TenantIdentifier: ${tenantId}`);
+    } else {
+      const session = await getServerSession(authOptions);
+      tenantId = session?.user?.email;
+      if (tenantId) console.log(`[API/Customers] Authenticated via Session. UserEmail: ${tenantId}`);
+    }
+
+    if (!tenantId) {
+      console.warn("[API/Customers] Unauthorized access attempt.");
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const tenantId = session.user.email;
     await dbConnect();
 
-    const customers = await Customer.find({ tenantId }).sort({ createdAt: -1 });
+    const escapedId = tenantId.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
+    console.log(`[API/Customers] Searching customers for tenantId: "${tenantId}" (Exact) OR Regex: ^${escapedId}$`);
 
-    return NextResponse.json(customers);
+    const customers = await Customer.find({
+      $or: [
+        { tenantId: tenantId },
+        { tenantId: { $regex: new RegExp(`^${escapedId}$`, 'i') } }
+      ]
+    })
+      .select('name phoneNumber email createdAt -_id')
+      .sort({ createdAt: -1 });
+
+    console.log(`[API/Customers] Found ${customers.length} customers.`);
+
+    const response = NextResponse.json(customers);
+    response.headers.set('X-Authenticated-Tenant', tenantId);
+    return response;
   } catch (error) {
     console.error("Failed to fetch customers:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
