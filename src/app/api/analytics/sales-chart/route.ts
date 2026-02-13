@@ -83,7 +83,7 @@ import Sale from "@/models/Sales"; // Importing 'Sale' to match your model expor
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 // --- MODIFIED: Ensure endOfDay is imported for accurate date range filtering ---
-import { startOfDay, endOfDay, subDays, subMonths } from "date-fns";
+import { startOfDay, endOfDay, subDays, subMonths, format } from "date-fns";
 
 export async function GET(req: Request) {
   try {
@@ -156,16 +156,70 @@ export async function GET(req: Request) {
       query.createdAt = { $gte: startDate, $lte: endDate };
     }
 
-    const salesData = await Sale.find(query)
-      .sort({ createdAt: 1 })
-      .select("amount createdAt");
+    // --- MODIFIED: Use aggregation to group data by hour/day for neater charts ---
+    const isSmallRange = range === "1D" ||
+      (startDateParam && endDateParam && (new Date(endDateParam).getTime() - new Date(startDateParam).getTime()) <= 48 * 60 * 60 * 1000);
 
-    const formatted = salesData.map((item) => ({
-      date: item.createdAt.toISOString(),
-      sales: item.amount,
-    }));
+    const unit = isSmallRange ? "hour" : "day";
 
-    return NextResponse.json(formatted);
+    const aggregationPipeline = [
+      { $match: query },
+      {
+        $group: {
+          _id: {
+            $dateTrunc: {
+              date: "$createdAt",
+              unit: unit,
+              timezone: "Asia/Kolkata"
+            }
+          },
+          sales: { $sum: "$amount" }
+        }
+      },
+      { $sort: { "_id": 1 } as const },
+      {
+        $project: {
+          _id: 0,
+          date: {
+            $dateToString: {
+              date: "$_id",
+              format: unit === "hour" ? "%Y-%m-%dT%H:00:00.000" : "%Y-%m-%dT00:00:00.000",
+              timezone: "Asia/Kolkata"
+            }
+          },
+          sales: 1
+        }
+      }
+    ];
+
+    const aggregated = await Sale.aggregate(aggregationPipeline);
+
+    // --- NEW: Fill Gaps with 0 Sales for a "Perfect" Timeline ---
+    const filledData: { date: string; sales: number }[] = [];
+    const current = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Create a map for quick lookup
+    const salesMap = new Map(aggregated.map(item => [item.date, item.sales]));
+
+    while (current <= end) {
+      const dateStr = unit === "hour"
+        ? format(current, "yyyy-MM-dd'T'HH:00:00.000")
+        : format(current, "yyyy-MM-dd'T'00:00:00.000");
+
+      filledData.push({
+        date: dateStr,
+        sales: salesMap.get(dateStr) || 0
+      });
+
+      if (unit === "hour") {
+        current.setHours(current.getHours() + 1);
+      } else {
+        current.setDate(current.getDate() + 1);
+      }
+    }
+
+    return NextResponse.json(filledData);
 
   } catch (error) {
     console.error("Error fetching sales chart data:", error);

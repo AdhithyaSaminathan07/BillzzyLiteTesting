@@ -514,10 +514,15 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length && label) {
     const dateObj = parseISO(label);
     const amount = payload[0].value;
+    // Check if it's hourly or daily (roughly)
+    const isHourly = label.includes('T') && !label.endsWith('00:00:00.000Z');
+
     return (
       <div className="bg-slate-900 text-white p-3 rounded-lg shadow-xl border border-slate-700 text-xs z-50">
-        <p className="text-gray-400 mb-1 font-medium">{format(dateObj, "MMM dd, h:mm a")}</p>
-        <p className="font-bold text-lg flex items-center gap-2">Bill: <span className="text-emerald-400">₹{amount.toLocaleString()}</span></p>
+        <p className="text-gray-400 mb-1 font-medium">
+          {isHourly ? format(dateObj, "MMM dd, hh:mm a") : format(dateObj, "MMM dd, yyyy")}
+        </p>
+        <p className="font-bold text-lg flex items-center gap-2">Total: <span className="text-emerald-400">₹{amount.toLocaleString()}</span></p>
       </div>
     );
   }
@@ -684,12 +689,12 @@ export default function StockStyleSalesChart() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart 
-              data={data} 
+            <AreaChart
+              data={data}
               margin={{ top: 30, right: 10, left: 10, bottom: 0 }}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onMouseMove={(e: any) => { 
-                if (e && e.activePayload) setDisplayValue(e.activePayload[0].value); 
+              onMouseMove={(e: any) => {
+                if (e && e.activePayload) setDisplayValue(e.activePayload[0].value);
               }}
               onMouseLeave={() => setDisplayValue(null)}
             >
@@ -706,12 +711,15 @@ export default function StockStyleSalesChart() {
               <Tooltip content={<CustomTooltip />} />
               <ReferenceLine y={averageSales} stroke="#374151" strokeDasharray="3 3" strokeWidth={1.5}><Label value={`Avg: ₹${Math.round(averageSales).toLocaleString()}`} position="insideTopRight" fill="#374151" fontSize={10} fontWeight="bold" offset={10} /></ReferenceLine>
               {baseDailyTarget > 0 && (<ReferenceLine y={baseDailyTarget} stroke="#6366f1" strokeDasharray="5 5" strokeWidth={1.5}><Label value={`Goal: ₹${baseDailyTarget.toLocaleString()}`} position="insideBottomRight" fill="#6366f1" fontSize={10} fontWeight="bold" offset={10} /></ReferenceLine>)}
-              <Area 
-                type="linear" dataKey="sales" stroke="url(#multiColorStroke)" fill="url(#multiColorFill)" strokeWidth={2} label={activeTab === 'Today' ? <CustomLabel /> : false}
+              <Area
+                type="monotone" dataKey="sales" stroke="url(#multiColorStroke)" fill="url(#multiColorFill)" strokeWidth={2} label={false}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 dot={(props: any) => {
                   const { cx, cy, payload } = props;
                   if (cx === undefined || cy === undefined) return <g key={payload.date} />;
+                  // Show dots for today to highlight specific hours, or for active selections
+                  // If we have more than 15 points, hide them to keep it neat
+                  if (data.length > 20 && activeTab !== 'Today') return <g key={payload.date} />;
                   return (<circle key={payload.date} cx={cx} cy={cy} r={3} fill={getDynamicColor(payload.sales)} />);
                 }}
                 activeDot={{ r: 6, strokeWidth: 0, fill: "#1f2937" }}
@@ -749,7 +757,7 @@ export default function StockStyleSalesChart() {
 
           {showCalendar && (
             <div className="absolute bottom-full right-0 mb-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-[240px] p-0 animate-in fade-in zoom-in-95 duration-200">
-               <style jsx global>{`
+              <style jsx global>{`
                   .filter-calendar .react-calendar { border: none; font-family: inherit; width: 100%; font-size: 0.7rem; background: transparent; }
                   .filter-calendar .react-calendar__navigation { height: 32px; margin-bottom: 0px; }
                   .filter-calendar .react-calendar__navigation button { min-width: 24px; background: none; font-weight: 600; font-size: 0.8rem; }
